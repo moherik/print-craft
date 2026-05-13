@@ -22,8 +22,11 @@
     },
     "dependencies": {
         "@vueuse/core": "^14.3.0",
+        "dom-to-image-more": "^3.7.2",
+        "html2canvas": "^1.4.1",
         "html2pdf.js": "^0.14.0",
         "jsbarcode": "^3.12.3",
+        "jspdf": "^4.2.1",
         "lucide-vue-next": "^1.0.0",
         "qrcode": "^1.5.4",
         "vuedraggable": "^4.1.0"

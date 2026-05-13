@@ -23,6 +23,13 @@
     * {
         @apply border-slate-200;
     }
+
+    /* Neutralize default borders during PDF export */
+    .exporting *,
+    .exporting ::before,
+    .exporting ::after {
+        border-color: transparent;
+    }
 }
 
 @layer components {
@@ -93,11 +100,10 @@
         display: none !important;
     }
 
-    /* 3. Force layout reset for main containers without destroying flex grids */
+    /* 3. Force layout reset for main containers */
     #app, 
     .min-h-screen, 
-    main,
-    .zoom-wrapper {
+    main {
         display: block !important;
         height: auto !important;
         min-height: 0 !important;
@@ -108,22 +114,31 @@
         transform: none !important;
     }
 
-    /* 4. Canvas Positioning */
+    /* 4. Remove zoom transform for print */
+    .zoom-wrapper {
+        transform: none !important;
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        background: transparent !important;
+    }
+
+    /* 5. Canvas Positioning — use static flow so pages stack vertically */
     .print-canvas {
         display: block !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
+        position: relative !important;
         margin: 0 !important;
         padding: 0 !important;
         border: none !important;
         box-shadow: none !important;
         transform: none !important;
         visibility: visible !important;
-        page-break-after: always !important;
     }
 
-    /* 5. Precision & Color */
+    /* 6. Precision & Color */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -133,3 +148,72 @@
         margin: 0;
     }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PDF EXPORT LOGIC (Clean up UI artifacts for dom-to-image)
+   ───────────────────────────────────────────────────────────────────────────── */
+/* Emulate print media query visibility */
+.exporting .no-print,
+.exporting .print\:hidden,
+.exporting header, 
+.exporting footer, 
+.exporting nav, 
+.exporting aside {
+    display: none !important;
+}
+
+/* Neutralize explicit layout artifacts */
+.exporting .no-print-border,
+.exporting .print\:\!border-transparent {
+    border-color: transparent !important;
+    border-style: solid !important; /* Override dashed outlines */
+}
+
+.exporting .print\:outline-none {
+    outline: none !important;
+}
+
+.exporting .print\:\!ring-0 {
+    --tw-ring-shadow: none !important;
+    box-shadow: none !important;
+}
+
+.exporting .print\:\!bg-transparent {
+    background-color: transparent !important;
+}
+
+/* Neutralize global tailwind artifacts */
+.exporting *:not([class~="border"]):not([class*="border-b"]):not([class*="border-t"]):not(tr):not(tbody):not(thead):not(hr) {
+    border-color: transparent !important;
+}
+
+.exporting, .exporting * {
+    transition: none !important;
+    animation: none !important;
+}
+
+.exporting .widget-renderer,
+.exporting input,
+.exporting textarea,
+.exporting [class*="outline"] {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    --tw-ring-shadow: none !important;
+    --tw-ring-offset-shadow: none !important;
+    --tw-shadow: none !important;
+}
+
+.exporting .bg-red-50\/30 {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+.exporting textarea::placeholder,
+.exporting input::placeholder {
+    color: transparent !important;
+}
+

@@ -120,6 +120,27 @@ function updateColWidth(colIdx, width) {
                             </button>
                         </div>
                     </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1 block">Line Height</label>
+                            <input type="number" :value="widget.lineHeight || 1.4" @input="update('lineHeight', +$event.target.value)"
+                                step="0.1" min="0.5" max="3" class="input-field text-xs py-1.5" />
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1 block">Spacing</label>
+                            <input type="number" :value="widget.letterSpacing || 0" @input="update('letterSpacing', +$event.target.value)"
+                                step="0.5" min="-2" max="10" class="input-field text-xs py-1.5" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1 block">Warna Teks</label>
+                        <div class="flex items-center gap-2">
+                            <input type="color" :value="widget.color" @input="update('color', $event.target.value)"
+                                class="w-10 h-8 p-0 border-0 bg-transparent cursor-pointer" />
+                            <span class="text-xs text-slate-600 uppercase">{{ widget.color || '#000000' }}</span>
+                        </div>
+                    </div>
+
                 </template>
 
                 <!-- Columns -->

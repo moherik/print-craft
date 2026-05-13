@@ -1,5 +1,5 @@
 export const WIDGET_DEFAULTS = {
-    text: { type: 'text', label: 'Text', placeholder: 'Enter text...', value: '', fontSize: 12, fontWeight: 'normal', align: 'left', color: '#000000' },
+    text: { type: 'text', label: 'Text', placeholder: 'Enter text...', value: '', fontSize: 12, fontWeight: 'normal', align: 'left', color: '#000000', lineHeight: 1.5, letterSpacing: 0 },
     image: { type: 'image', label: 'Image', src: null, fit: 'contain' },
     divider: { type: 'divider', label: 'Divider', style: 'solid', color: '#cccccc', height: 4 },
     barcode: { type: 'barcode', label: 'Barcode', value: '1234567890', format: 'CODE128' },

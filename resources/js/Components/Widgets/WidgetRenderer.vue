@@ -29,24 +29,24 @@ const calendarDays = computed(() => {
     const year = props.widget.year || new Date().getFullYear();
     const month = (props.widget.month || (new Date().getMonth() + 1)) - 1;
     const startDay = props.widget.startDay === 'sunday' ? 0 : 1;
-    
+
     const date = new Date(year, month, 1);
     const days = [];
-    
+
     let firstDayOfWeek = date.getDay();
     let offset = firstDayOfWeek - startDay;
     if (offset < 0) offset += 7;
     for (let i = 0; i < offset; i++) days.push('');
-    
+
     const lastDay = new Date(year, month + 1, 0).getDate();
     for (let i = 1; i <= lastDay; i++) days.push(i);
-    
+
     while (days.length % 7 !== 0) days.push('');
     return days;
 });
 
 const weekDays = computed(() => {
-    return props.widget.startDay === 'sunday' 
+    return props.widget.startDay === 'sunday'
         ? ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
         : ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 });
@@ -91,14 +91,21 @@ const monthlyHolidays = computed(() => {
 const editableText = ref('');
 onMounted(() => {
     if (props.widget.type === 'text') {
-        editableText.value = props.widget.value || props.widget.placeholder || '';
+        editableText.value = props.widget.value || '';
     }
 });
+
+watch(() => props.widget.value, (newVal) => {
+    if (props.widget.type === 'text' && newVal !== editableText.value) {
+        editableText.value = newVal || '';
+    }
+});
+
 
 const displayValue = computed(() => {
     if (props.widget.type !== 'text') return '';
     let val = editableText.value;
-    
+
     // Check if we have sibling calendar to get month/year
     const calendar = props.allWidgets.find(w => w.type === 'calendar');
     if (calendar) {
@@ -106,9 +113,48 @@ const displayValue = computed(() => {
         val = val.replace(/\{\{month\}\}/gi, monthName);
         val = val.replace(/\{\{year\}\}/gi, calendar.year || new Date().getFullYear());
     }
-    
-    return val;
+
+    return val || props.widget.placeholder || '';
 });
+
+// Auto-resize textarea
+const textInput = ref(null);
+function adjustHeight() {
+    if (textInput.value) {
+        textInput.value.style.height = 'auto';
+        textInput.value.style.height = textInput.value.scrollHeight + 'px';
+    }
+}
+
+watch(editableText, () => {
+    if (props.widget.type === 'text' && isSelected.value) {
+        nextTick(adjustHeight);
+    }
+});
+
+watch(isSelected, (val) => {
+    if (val && props.widget.type === 'text') {
+        nextTick(() => {
+            adjustHeight();
+            textInput.value?.focus();
+        });
+    }
+});
+
+const textStyles = computed(() => {
+    const baseSize = props.widget.fontSize || 12;
+    const size = props.compact ? (baseSize * 0.7) : baseSize;
+    return {
+        fontSize: size + 'px',
+        fontWeight: props.widget.fontWeight || 'normal',
+        textAlign: props.widget.align || 'left',
+        color: props.widget.color || '#000000',
+        lineHeight: props.widget.lineHeight || 1.4,
+        letterSpacing: props.widget.letterSpacing || 'normal',
+        fontFamily: props.widget.fontFamily || 'inherit',
+    };
+});
+
 
 
 // ─── Image Widget ───
@@ -178,64 +224,60 @@ function addChild(colIndex, type = 'text') {
     newChildren[colIndex] = [...(newChildren[colIndex] || []), defaults[type]];
     emit('update-widget', props.path, { children: newChildren });
 }
+
+function handleFocus() {
+    if (!isSelected.value) {
+        emit('select-widget', props.path);
+    }
+}
 </script>
 
 <template>
-    <div @click.stop="emit('select-widget', path)"
-        class="widget-renderer relative group/widget cursor-pointer"
+    <div @click.stop="emit('select-widget', path)" @focus="handleFocus" :tabindex="isSelected ? -1 : 0"
+        class="widget-renderer relative group/widget cursor-pointer outline-none focus:ring-2 focus:ring-red-600/50 focus:ring-offset-1"
         :class="{ 'ring-2 ring-red-600 ring-offset-1 print:!ring-0 print:!ring-offset-0': isSelected }">
 
         <!-- TEXT -->
-        <div v-if="widget.type === 'text'" class="w-full">
-            <div v-if="selectedPath?.[0] === index" class="w-full">
-                <textarea 
-                    v-model="editableText"
+        <div v-if="widget.type === 'text'" class="w-full relative">
+            <div v-if="isSelected" class="w-full">
+                <textarea ref="textInput" v-model="editableText"
                     @input="emit('update-widget', path, { value: editableText })"
-                    class="w-full bg-slate-50 border border-slate-200 rounded p-1 outline-none focus:ring-1 focus:ring-red-500 resize-none overflow-hidden"
-                    :style="{ 
-                        fontSize: (compact ? (widget.fontSize * 0.7) : widget.fontSize) + 'px', 
-                        fontWeight: widget.fontWeight || 'normal',
-                        textAlign: widget.align || 'left',
-                        color: widget.color || '#000000',
-                        minHeight: '1.2em'
-                    }"
-                    rows="1"
-                    @keyup.enter="$event.target.blur()"
-                ></textarea>
+                    class="w-full bg-transparent border-none p-0 m-0 outline-none resize-none overflow-hidden block transition-all placeholder:text-slate-300"
+                    :style="textStyles" rows="1" :placeholder="widget.placeholder || 'Ketik sesuatu...'"></textarea>
+                <!-- Subtle indicator that it's being edited -->
+                <div
+                    class="absolute -inset-x-2 -inset-y-1 bg-red-50/30 -z-10 rounded-sm border border-red-100/50 pointer-events-none no-print">
+                </div>
             </div>
-            <div v-else 
-                class="w-full break-words whitespace-pre-wrap"
-                :style="{ 
-                    fontSize: (compact ? (widget.fontSize * 0.7) : widget.fontSize) + 'px', 
-                    fontWeight: widget.fontWeight || 'normal',
-                    textAlign: widget.align || 'left',
-                    color: widget.color || '#000000'
-                }">
+            <div v-else class="w-full break-words whitespace-pre-wrap transition-all cursor-text"
+                :class="{ 'text-slate-300 italic': !editableText && widget.placeholder }" :style="textStyles">
                 {{ displayValue }}
             </div>
         </div>
 
+
         <!-- IMAGE -->
         <div v-else-if="widget.type === 'image'" class="w-full">
             <div v-if="imageSrc" class="w-full">
-                <img :src="imageSrc" class="w-full object-contain max-h-full" :style="{ objectFit: widget.fit || 'contain' }" />
+                <img :src="imageSrc" class="w-full object-contain max-h-full"
+                    :style="{ objectFit: widget.fit || 'contain' }" />
             </div>
-            <label v-else class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded cursor-pointer hover:border-blue-400 transition-colors bg-gray-50"
+            <label v-else
+                class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded cursor-pointer hover:border-blue-400 transition-colors bg-gray-50"
                 :class="compact ? 'p-1' : 'p-4'">
-                <span class="text-gray-400" :class="compact ? 'text-[8px]' : 'text-xs'">📷 {{ widget.label || 'Upload' }}</span>
+                <span class="text-gray-400" :class="compact ? 'text-[8px]' : 'text-xs'">📷 {{ widget.label || 'Upload'
+                    }}</span>
                 <input type="file" accept="image/*" @change="handleImageUpload" class="hidden" />
             </label>
         </div>
 
         <!-- DIVIDER / SPACER -->
-        <div v-else-if="widget.type === 'divider'" class="w-full flex flex-col justify-center" :style="{ height: (widget.height || 4) + 'mm' }">
-            <hr v-if="widget.style !== 'transparent'" 
-                class="w-full border-t" 
-                :style="{ 
-                    borderStyle: widget.style || 'solid', 
-                    borderColor: widget.color || '#d1d5db'
-                }" 
-            />
+        <div v-else-if="widget.type === 'divider'" class="w-full flex flex-col justify-center"
+            :style="{ height: (widget.height || 4) + 'mm' }">
+            <hr v-if="widget.style !== 'transparent'" class="w-full border-t" :style="{
+                borderStyle: widget.style || 'solid',
+                borderColor: widget.color || '#d1d5db'
+            }" />
         </div>
 
         <!-- QR CODE -->
@@ -249,11 +291,11 @@ function addChild(colIndex, type = 'text') {
         </div>
 
         <!-- TABLE -->
-        <div v-else-if="widget.type === 'table'" class="w-full overflow-auto">
+        <div v-else-if="widget.type === 'table'" class="w-full">
             <table class="w-full border-collapse" :class="compact ? 'text-[6px]' : 'text-xs'">
                 <thead>
                     <tr>
-                        <th v-for="(col, ci) in (widget.columns || ['A','B','C'])" :key="ci"
+                        <th v-for="(col, ci) in (widget.columns || ['A', 'B', 'C'])" :key="ci"
                             class="border border-gray-300 bg-gray-100 font-semibold text-center"
                             :class="compact ? 'px-0.5 py-0' : 'px-2 py-1'">
                             {{ col }}
@@ -262,18 +304,18 @@ function addChild(colIndex, type = 'text') {
                 </thead>
                 <tbody>
                     <tr v-for="r in (widget.rows || 5)" :key="r">
-                        <td v-for="(col, ci) in (widget.columns || ['A','B','C'])" :key="ci"
-                            class="border border-gray-300"
-                            :class="compact ? 'px-0.5 py-0 h-3' : 'px-2 py-1.5 h-6'">
+                        <td v-for="(col, ci) in (widget.columns || ['A', 'B', 'C'])" :key="ci"
+                            class="border border-gray-300" :class="compact ? 'px-0.5 py-0 h-3' : 'px-2 py-1.5 h-6'">
                         </td>
                     </tr>
-                    <tr v-for="(sum, si) in (widget.summaryRows || [])" :key="'sum'+si">
-                        <td :colspan="(widget.columns || ['A','B','C']).length - 1" 
+                    <tr v-for="(sum, si) in (widget.summaryRows || [])" :key="'sum' + si">
+                        <td :colspan="(widget.columns || ['A', 'B', 'C']).length - 1"
                             class="border border-gray-300 font-semibold text-center"
                             :class="compact ? 'px-0.5 py-0 h-3' : 'px-2 py-1.5 h-6'">
                             {{ sum }}
                         </td>
-                        <td class="border border-gray-300" :class="compact ? 'px-0.5 py-0 h-3' : 'px-2 py-1.5 h-6'"></td>
+                        <td class="border border-gray-300" :class="compact ? 'px-0.5 py-0 h-3' : 'px-2 py-1.5 h-6'">
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -283,63 +325,53 @@ function addChild(colIndex, type = 'text') {
         <div v-else-if="widget.type === 'columns'" class="w-full flex" :style="{ gap: (widget.gap || 2) + 'mm' }">
             <!-- New Parent Format (Nested Widgets) -->
             <template v-if="widget.children">
-                <div v-for="(col, ci) in (widget.colCount || 2)" :key="ci" 
-                    class="flex flex-col transition-colors"
+                <div v-for="(col, ci) in (widget.colCount || 2)" :key="ci" class="flex flex-col transition-colors"
                     :class="!compact ? 'outline outline-1 outline-dashed outline-slate-200 hover:outline-slate-300 outline-offset-[-1px] print:outline-none' : ''"
-                    :style="{ 
+                    :style="{
                         flex: (widget.colWidths && widget.colWidths[ci]) ? `${widget.colWidths[ci]} 1 0%` : '1 1 0%',
                         textAlign: widget.align || 'left',
                         gap: (widget.childGap || 1) + 'mm'
                     }">
-                    
-                    <WidgetRenderer
-                        v-for="(child, chi) in (widget.children[ci] || [])"
-                        :key="chi"
-                        :widget="child"
-                        :path="[...path, ci, chi]"
-                        :selectedPath="selectedPath"
-                        :compact="compact"
+
+                    <WidgetRenderer v-for="(child, chi) in (widget.children[ci] || [])" :key="chi" :widget="child"
+                        :path="[...path, ci, chi]" :selectedPath="selectedPath" :compact="compact"
                         @select-widget="(p) => emit('select-widget', p)"
-                        @update-widget="(p, val) => emit('update-widget', p, val)"
-                    />
+                        @update-widget="(p, val) => emit('update-widget', p, val)" />
 
                     <!-- Placeholder / Add Buttons -->
-                    <div v-if="!compact && !widget.children[ci]?.length" class="flex-1 flex flex-col items-center justify-center p-2 gap-1.5 opacity-50 hover:opacity-100 transition-opacity print:hidden">
+                    <div v-if="!compact && !widget.children[ci]?.length"
+                        class="flex-1 flex flex-col items-center justify-center p-2 gap-1.5 opacity-50 hover:opacity-100 transition-opacity print:hidden">
                         <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Tambah</span>
                         <div class="flex gap-0.5">
-                            <button @click.stop="addChild(ci, 'text')" class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors" title="Text"><Type class="w-3 h-3" /></button>
-                            <button @click.stop="addChild(ci, 'image')" class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors" title="Image"><ImageIcon class="w-3 h-3" /></button>
-                            <button @click.stop="addChild(ci, 'qrcode')" class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors" title="QR Code"><QrCode class="w-3 h-3" /></button>
-                            <button @click.stop="addChild(ci, 'barcode')" class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors" title="Barcode"><Barcode class="w-3 h-3" /></button>
+                            <button @click.stop="addChild(ci, 'text')"
+                                class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors"
+                                title="Text">
+                                <Type class="w-3 h-3" />
+                            </button>
+                            <button @click.stop="addChild(ci, 'image')"
+                                class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors"
+                                title="Image">
+                                <ImageIcon class="w-3 h-3" />
+                            </button>
+                            <button @click.stop="addChild(ci, 'qrcode')"
+                                class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors"
+                                title="QR Code">
+                                <QrCode class="w-3 h-3" />
+                            </button>
+                            <button @click.stop="addChild(ci, 'barcode')"
+                                class="p-1 rounded bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors"
+                                title="Barcode">
+                                <Barcode class="w-3 h-3" />
+                            </button>
                         </div>
                     </div>
-                </div>
-            </template>
-            <!-- Old Items Format (Compatibility) -->
-            <template v-else>
-                <div v-for="(col, ci) in (widget.items || [])" :key="ci" class="flex-1" :style="{ textAlign: col.align || 'left' }">
-                    <input
-                        type="text"
-                        :value="col.value || ''"
-                        :placeholder="col.placeholder"
-                        @input="emit('update-widget', path, { items: (widget.items || []).map((it, i) => i === ci ? { ...it, value: $event.target.value } : it) })"
-                        class="w-full bg-transparent border-none outline-none placeholder:text-gray-400 p-0 m-0 focus:ring-0"
-                        :style="{
-                            fontSize: (widget.fontSize || 12) + 'px',
-                            fontWeight: col.fontWeight || widget.fontWeight || 'normal',
-                            textAlign: col.align || 'left',
-                            color: widget.color || '#1f2937',
-                            lineHeight: 'inherit'
-                        }"
-                    />
                 </div>
             </template>
         </div>
 
         <!-- CHECKLIST -->
         <div v-else-if="widget.type === 'checklist'" class="w-full space-y-0.5">
-            <div v-for="i in (widget.items || 10)" :key="i"
-                class="flex items-center gap-1"
+            <div v-for="i in (widget.items || 10)" :key="i" class="flex items-center gap-1"
                 :class="compact ? 'text-[7px]' : 'text-xs'">
                 <div class="border border-gray-400 flex-shrink-0" :class="compact ? 'w-2 h-2' : 'w-3.5 h-3.5'"></div>
                 <div class="flex-1 border-b border-gray-200" :class="compact ? 'h-2' : 'h-4'"></div>
@@ -348,8 +380,7 @@ function addChild(colIndex, type = 'text') {
 
         <!-- LINES -->
         <div v-else-if="widget.type === 'lines'" class="w-full">
-            <div v-for="i in (widget.lineCount || 20)" :key="i"
-                class="border-b border-gray-300"
+            <div v-for="i in (widget.lineCount || 20)" :key="i" class="border-b border-gray-300"
                 :style="{ height: (compact ? 4 : (widget.lineSpacing || 8)) + 'mm' }">
             </div>
         </div>
@@ -357,54 +388,47 @@ function addChild(colIndex, type = 'text') {
         <!-- CALENDAR -->
         <div v-else-if="widget.type === 'calendar'" class="w-full">
             <!-- Calendar Title (Month & Year) -->
-            <div v-if="widget.titleStyle?.show" 
-                class="uppercase tracking-widest"
-                :style="{
-                    fontSize: (compact ? ((widget.titleStyle?.fontSize || 18) * 0.6) : (widget.titleStyle?.fontSize || 18)) + 'px',
-                    color: widget.titleStyle?.color || '#0f172a',
-                    fontWeight: widget.titleStyle?.fontWeight || 'bold',
-                    textAlign: widget.titleStyle?.align || 'center',
-                    marginBottom: (compact ? 2 : (widget.titleStyle?.marginBottom || 5)) + 'mm'
-                }">
-                {{ new Date(2000, (widget.month || 1) - 1).toLocaleString('id-ID', { month: 'long' }) }} {{ widget.year }}
+            <div v-if="widget.titleStyle?.show" class="uppercase tracking-widest" :style="{
+                fontSize: (compact ? ((widget.titleStyle?.fontSize || 18) * 0.6) : (widget.titleStyle?.fontSize || 18)) + 'px',
+                color: widget.titleStyle?.color || '#0f172a',
+                fontWeight: widget.titleStyle?.fontWeight || 'bold',
+                textAlign: widget.titleStyle?.align || 'center',
+                marginBottom: (compact ? 2 : (widget.titleStyle?.marginBottom || 5)) + 'mm'
+            }">
+                {{ new Date(2000, (widget.month || 1) - 1).toLocaleString('id-ID', { month: 'long' }) }} {{ widget.year
+                }}
             </div>
 
             <div class="grid grid-cols-7 border-t border-l border-gray-800">
 
                 <!-- Days of week header -->
-                <div v-for="day in weekDays" :key="day" 
-                    class="text-center border-r border-b border-gray-800" 
-                    :style="{ 
-                        backgroundColor: widget.headerStyle?.bg || '#f3f4f6', 
-                        color: widget.headerStyle?.color || '#1f2937',
-                        fontSize: (compact ? ((widget.headerStyle?.fontSize || 10) * 0.6) : (widget.headerStyle?.fontSize || 10)) + 'px',
-                        fontWeight: widget.headerStyle?.fontWeight || 'bold',
-                        height: (compact ? 4 : (widget.headerStyle?.height || 8)) + 'mm',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }">
+                <div v-for="day in weekDays" :key="day" class="text-center border-r border-b border-gray-800" :style="{
+                    backgroundColor: widget.headerStyle?.bg || '#f3f4f6',
+                    color: widget.headerStyle?.color || '#1f2937',
+                    fontSize: (compact ? ((widget.headerStyle?.fontSize || 10) * 0.6) : (widget.headerStyle?.fontSize || 10)) + 'px',
+                    fontWeight: widget.headerStyle?.fontWeight || 'bold',
+                    height: (compact ? 4 : (widget.headerStyle?.height || 8)) + 'mm',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }">
                     {{ day }}
                 </div>
                 <!-- Dates grid -->
-                <div v-for="(day, i) in calendarDays" :key="i" 
-                    class="border-r border-b border-gray-800 relative" 
-                    :style="{ 
+                <div v-for="(day, i) in calendarDays" :key="i" class="border-r border-b border-gray-800 relative"
+                    :style="{
                         backgroundColor: (day && getHoliday(day)) ? (widget.holidayStyle?.bg || '#fff1f2') : (widget.dateStyle?.bg || '#ffffff'),
                         height: (compact ? 4 : (widget.dateStyle?.height || 25)) + 'mm',
                         padding: compact ? '2px' : '4px'
                     }">
-                    <span v-if="widget.showDates && day" 
-                        class="absolute top-1 left-1.5" 
-                        :style="{
-                            fontSize: (compact ? ((widget.dateStyle?.fontSize || 12) * 0.4) : (widget.dateStyle?.fontSize || 12)) + 'px',
-                            fontWeight: (day && getHoliday(day)) ? 'bold' : (widget.dateStyle?.fontWeight || '600'),
-                            color: (day && getHoliday(day)) ? (widget.holidayStyle?.color || '#dc2626') : (widget.dateStyle?.color || '#1e293b')
-                        }"
-                    >
+                    <span v-if="widget.showDates && day" class="absolute top-1 left-1.5" :style="{
+                        fontSize: (compact ? ((widget.dateStyle?.fontSize || 12) * 0.4) : (widget.dateStyle?.fontSize || 12)) + 'px',
+                        fontWeight: (day && getHoliday(day)) ? 'bold' : (widget.dateStyle?.fontWeight || '600'),
+                        color: (day && getHoliday(day)) ? (widget.holidayStyle?.color || '#dc2626') : (widget.dateStyle?.color || '#1e293b')
+                    }">
                         {{ day }}
                     </span>
 
                     <!-- Holiday Name -->
-                    <div v-if="!compact && getHoliday(day)" 
+                    <div v-if="!compact && getHoliday(day)"
                         class="absolute bottom-1 left-1.5 right-1 leading-tight break-words overflow-hidden max-h-[14px]"
                         :style="{
                             fontSize: (widget.holidayStyle?.detailSize || 7) + 'px',
@@ -416,15 +440,16 @@ function addChild(colIndex, type = 'text') {
 
                     <!-- Event Lines -->
                     <div v-if="!compact && day && widget.eventStyle?.show" class="mt-4 space-y-1 pr-1">
-                         <div v-for="l in 3" :key="l" class="w-full border-b" :style="{ borderColor: widget.eventStyle?.color || '#e2e8f0', height: (widget.eventStyle?.fontSize || 8) + 'px' }"></div>
+                        <div v-for="l in 3" :key="l" class="w-full border-b"
+                            :style="{ borderColor: widget.eventStyle?.color || '#e2e8f0', height: (widget.eventStyle?.fontSize || 8) + 'px' }">
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Holiday List Footer -->
-            <div v-if="!compact && widget.holidayListStyle?.show && monthlyHolidays.length > 0" 
-                class="mt-3 flex flex-wrap gap-x-4 gap-y-1"
-                :style="{
+            <div v-if="!compact && widget.holidayListStyle?.show && monthlyHolidays.length > 0"
+                class="mt-3 flex flex-wrap gap-x-4 gap-y-1" :style="{
                     fontSize: (widget.holidayListStyle?.fontSize || 8) + 'px',
                     color: widget.holidayListStyle?.color || '#1e293b',
                     fontWeight: widget.holidayListStyle?.fontWeight || 'normal'
@@ -438,11 +463,10 @@ function addChild(colIndex, type = 'text') {
             </div>
 
             <!-- Custom Event Footer (Future usage) -->
-            <div v-if="!compact && widget.footerEventStyle?.show" class="mt-2"
-                :style="{
-                    fontSize: (widget.footerEventStyle?.fontSize || 8) + 'px',
-                    color: widget.footerEventStyle?.color || '#64748b'
-                }">
+            <div v-if="!compact && widget.footerEventStyle?.show" class="mt-2" :style="{
+                fontSize: (widget.footerEventStyle?.fontSize || 8) + 'px',
+                color: widget.footerEventStyle?.color || '#64748b'
+            }">
                 <!-- Placeholder for custom events -->
             </div>
         </div>
@@ -452,23 +476,28 @@ function addChild(colIndex, type = 'text') {
         <div v-else-if="widget.type === 'weekly_planner'" class="w-full">
             <!-- Vertical Layout -->
             <div v-if="widget.layout === 'vertical'" class="flex w-full border-t border-l border-gray-800">
-                <div v-for="day in (widget.includeWeekend ? weekDays : weekDays.slice(0, 5))" :key="day" class="flex-1 flex flex-col border-r border-gray-800">
-                    <div class="text-center font-bold border-b border-gray-800 bg-gray-100 uppercase" :class="compact ? 'text-[4px] py-0.5' : 'text-[10px] py-1.5'">
+                <div v-for="day in (widget.includeWeekend ? weekDays : weekDays.slice(0, 5))" :key="day"
+                    class="flex-1 flex flex-col border-r border-gray-800">
+                    <div class="text-center font-bold border-b border-gray-800 bg-gray-100 uppercase"
+                        :class="compact ? 'text-[4px] py-0.5' : 'text-[10px] py-1.5'">
                         {{ day }}
                     </div>
                     <!-- Empty space for planning -->
                     <div class="w-full" :class="compact ? 'h-8' : 'min-h-[50mm]'"></div>
                 </div>
                 <div v-if="!widget.includeWeekend" class="flex-1 flex flex-col border-r border-gray-800 bg-gray-50/50">
-                    <div class="text-center font-bold border-b border-gray-800 bg-gray-100 uppercase" :class="compact ? 'text-[4px] py-0.5' : 'text-[10px] py-1.5'">Notes</div>
+                    <div class="text-center font-bold border-b border-gray-800 bg-gray-100 uppercase"
+                        :class="compact ? 'text-[4px] py-0.5' : 'text-[10px] py-1.5'">Notes</div>
                     <div class="w-full" :class="compact ? 'h-8' : 'min-h-[50mm]'"></div>
                 </div>
             </div>
-            
+
             <!-- Horizontal Layout -->
             <div v-else class="flex flex-col w-full border-t border-gray-800 border-l border-r">
-                <div v-for="day in (widget.includeWeekend ? weekDays : weekDays.slice(0, 5))" :key="day" class="flex border-b border-gray-800">
-                    <div class="font-bold border-r border-gray-800 bg-gray-50 flex items-start w-1/4" :class="compact ? 'text-[5px] p-1' : 'text-xs p-2'">
+                <div v-for="day in (widget.includeWeekend ? weekDays : weekDays.slice(0, 5))" :key="day"
+                    class="flex border-b border-gray-800">
+                    <div class="font-bold border-r border-gray-800 bg-gray-50 flex items-start w-1/4"
+                        :class="compact ? 'text-[5px] p-1' : 'text-xs p-2'">
                         {{ day }}
                     </div>
                     <div class="flex-1" :class="compact ? 'min-h-[6px]' : 'min-h-[25mm]'"></div>
@@ -484,7 +513,19 @@ function addChild(colIndex, type = 'text') {
 </template>
 
 <style scoped>
-.widget-renderer input::placeholder {
-    color: #9ca3af;
+.widget-renderer input::placeholder,
+.widget-renderer textarea::placeholder {
+    color: #cbd5e1;
+}
+
+/* Make text selection look more premium */
+.widget-renderer textarea::selection {
+    background: rgba(220, 38, 38, 0.1);
+    color: inherit;
+}
+
+/* Smooth transition when selecting widgets */
+.widget-renderer {
+    transition: all 0.2s ease;
 }
 </style>
