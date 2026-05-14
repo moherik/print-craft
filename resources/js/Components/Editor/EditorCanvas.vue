@@ -44,7 +44,13 @@ const spacingMm = computed(() => ((props.lineSpacing - 1) * 4) + 'mm');
 
 function getCellsForPage(pageIdx) {
     const start = (pageIdx - 1) * cellsPerPage.value;
-    return props.cells.slice(start, start + cellsPerPage.value);
+    const pageCells = props.cells.slice(start, start + cellsPerPage.value);
+
+    // Fill remaining slots in grid to keep layout consistent
+    while (pageCells.length < cellsPerPage.value) {
+        pageCells.push([]);
+    }
+    return pageCells;
 }
 
 function absCellIdx(pIdx, cIdx = 0) {
@@ -54,9 +60,11 @@ function absCellIdx(pIdx, cIdx = 0) {
 // ─── Guide Lines ───
 const guideLines = computed(() => {
     const M = m.value, W = w.value, H = h.value, C = cl;
-    
+    const lines = [];
+
+    // Base Margin Guides
     if (props.guideMode === 'crop') {
-        return [
+        lines.push(
             { x1: M, y1: 0, x2: M, y2: C },
             { x1: 0, y1: M, x2: C, y2: M },
             { x1: W - M, y1: 0, x2: W - M, y2: C },
@@ -64,17 +72,49 @@ const guideLines = computed(() => {
             { x1: M, y1: H, x2: M, y2: H - C },
             { x1: 0, y1: H - M, x2: C, y2: H - M },
             { x1: W - M, y1: H, x2: W - M, y2: H - C },
-            { x1: W, y1: H - M, x2: W - C, y2: H - M },
-        ];
+            { x1: W, y1: H - M, x2: W - C, y2: H - M }
+        );
     } else if (props.guideMode === 'full') {
-        return [
+        lines.push(
             { x1: M, y1: 0, x2: M, y2: H },
             { x1: 0, y1: M, x2: W, y2: M },
             { x1: W - M, y1: 0, x2: W - M, y2: H },
-            { x1: 0, y1: H - M, x2: W, y2: H - M },
-        ];
+            { x1: 0, y1: H - M, x2: W, y2: H - M }
+        );
     }
-    return [];
+
+    // Grid Guides (Show only if guideMode is NOT none)
+    if (props.guideMode !== 'none') {
+        const innerW = W - (2 * M);
+        const innerH = H - (2 * M);
+        const cellW = innerW / props.gridCols;
+        const cellH = innerH / props.gridRows;
+
+        // Vertical Grid Marks
+        for (let i = 1; i < props.gridCols; i++) {
+            const x = M + (i * cellW);
+            if (props.guideMode === 'full') {
+                lines.push({ x1: x, y1: 0, x2: x, y2: H });
+            } else {
+                // Top & Bottom tick marks
+                lines.push({ x1: x, y1: 0, x2: x, y2: C });
+                lines.push({ x1: x, y1: H, x2: x, y2: H - C });
+            }
+        }
+        // Horizontal Grid Marks
+        for (let i = 1; i < props.gridRows; i++) {
+            const y = M + (i * cellH);
+            if (props.guideMode === 'full') {
+                lines.push({ x1: 0, y1: y, x2: W, y2: y });
+            } else {
+                // Left & Right tick marks
+                lines.push({ x1: 0, y1: y, x2: C, y2: y });
+                lines.push({ x1: W, y1: y, x2: W - C, y2: y });
+            }
+        }
+    }
+
+    return lines;
 });
 
 function handleDraggableChange(evt, cellIdx) {
@@ -88,7 +128,8 @@ function onDragEnd() { isDragging.value = false; }
 </script>
 
 <template>
-    <div ref="canvasContainer" class="mx-auto print:!w-auto print:!h-auto print-reset-zoom" :style="{ zoom: zoom }" @click.stop>
+    <div ref="canvasContainer" class="mx-auto print:!w-auto print:!h-auto print-reset-zoom" :style="{ zoom: zoom }"
+        @click.stop>
         <div class="zoom-wrapper">
 
             <div v-for="pIdx in totalPages" :key="pIdx"
@@ -103,12 +144,13 @@ function onDragEnd() { isDragging.value = false; }
                     height: h + 'mm',
                     padding: m + 'mm',
                 }">
-                
+
                     <!-- Guide Marks (z-0 so it never blocks drag) -->
                     <svg v-if="guideMode !== 'none'" class="absolute inset-0 w-full h-full pointer-events-none z-0"
                         style="overflow:visible">
                         <line v-for="(ln, li) in guideLines" :key="li" :x1="ln.x1 + 'mm'" :y1="ln.y1 + 'mm'"
-                            :x2="ln.x2 + 'mm'" :y2="ln.y2 + 'mm'" stroke="#94a3b8" stroke-width="0.1mm" />
+                            :x2="ln.x2 + 'mm'" :y2="ln.y2 + 'mm'" stroke="#94a3b8" stroke-width="0.1mm"
+                            :stroke-dasharray="guideMode === 'crop' ? 'none' : '0.5 1'" />
                     </svg>
 
                     <!-- Cell grid (1×1 when not grid) -->
@@ -117,7 +159,6 @@ function onDragEnd() { isDragging.value = false; }
                         <div v-for="(cellWidgets, cIdx) in getCellsForPage(pIdx)" :key="cIdx"
                             @click="emit('select-widget', null, absCellIdx(pIdx, cIdx))"
                             class="flex flex-col relative box-border" :class="[
-                                isGrid ? 'border border-dashed border-slate-200 overflow-hidden no-print-border print:!border-transparent' : '',
                                 { 'bg-red-50/50 ring-1 ring-inset ring-red-100 print:!bg-transparent print:!ring-0': !isSynced && selectedCellIndex === absCellIdx(pIdx, cIdx) }
                             ]" :style="{
                                 width: (100 / gridCols) + '%',
@@ -134,9 +175,9 @@ function onDragEnd() { isDragging.value = false; }
                             <!-- Widget list -->
                             <draggable :list="cellWidgets" group="widgets" item-key="index" handle=".drag-handle"
                                 @change="(evt) => handleDraggableChange(evt, absCellIdx(pIdx, cIdx))"
-                                @start="onDragStart" @end="onDragEnd"
-                                ghost-class="sortable-ghost" drag-class="sortable-drag"
-                                class="flex-1 flex flex-col drop-zone" :class="{ 'w-full h-full': !isGrid, 'drop-zone-active': isDragging }"
+                                @start="onDragStart" @end="onDragEnd" ghost-class="sortable-ghost"
+                                drag-class="sortable-drag" class="flex-1 flex flex-col drop-zone"
+                                :class="{ 'w-full h-full': !isGrid, 'drop-zone-active': isDragging }"
                                 :style="{ gap: spacingMm }">
 
                                 <template #item="{ element: widget, index: wIdx }">
@@ -155,7 +196,7 @@ function onDragEnd() { isDragging.value = false; }
 
                                         <WidgetRenderer :widget="widget" :allWidgets="cellWidgets" :index="wIdx"
                                             :path="[wIdx]" :selectedPath="selectedWidgetPath" :compact="isGrid"
-                                            :cellIndex="absCellIdx(pIdx, cIdx)"
+                                            :cellIndex="absCellIdx(pIdx, cIdx)" :selectedCellIndex="selectedCellIndex"
                                             @select-widget="(path) => emit('select-widget', path, absCellIdx(pIdx, cIdx))"
                                             @update-widget="(path, updates) => emit('update-widget', path, updates, absCellIdx(pIdx, cIdx))" />
                                     </div>

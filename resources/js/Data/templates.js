@@ -577,6 +577,8 @@ export const TEMPLATES = [
         isFeatured: true,
         defaultPages: 12,
         autoIncrementMonth: true,
+        enableQuantity: false,
+        enableGrid: false,
         tags: ["planner", "kalender", "bulanan", "monthly"],
         previewColor: "#DC2626",
         widgets: [

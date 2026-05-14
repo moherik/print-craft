@@ -6,7 +6,7 @@ import {
     Grid3x3, Ruler, FileText, AlignVerticalSpaceAround,
     RectangleVertical,
     RectangleHorizontal,
-    Scan
+    Scan, Layers
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -14,12 +14,12 @@ const props = defineProps({
     gridCols: Number, gridRows: Number,
     marginMm: Number, lineSpacing: Number,
     template: Object, category: Object, isExporting: Boolean,
-    guideMode: String,
+    guideMode: String, printQuantity: Number, isSynced: Boolean,
 });
 
 const emit = defineEmits([
     'update:paperSize', 'update:orientation', 'update:gridCols', 'update:gridRows',
-    'update:marginMm', 'update:lineSpacing', 'print', 'export-pdf', 'update:guideMode'
+    'update:marginMm', 'update:lineSpacing', 'print', 'export-pdf', 'update:guideMode', 'update:printQuantity'
 ]);
 
 const paperSizes = Object.keys(PAPER_SIZES);
@@ -64,48 +64,9 @@ const paperSizes = Object.keys(PAPER_SIZES);
                 </button>
             </div>
 
-            <!-- Grid -->
-            <div class="hidden md:flex items-center gap-1.5 border-l border-slate-200 pl-4">
-                <Grid3x3 class="w-4 h-4 text-slate-400" title="Grid Layout" />
-                <input type="number" :value="gridCols"
-                    @input="emit('update:gridCols', Math.max(1, +$event.target.value))" min="1" max="10"
-                    class="w-12 bg-white border border-slate-300 text-xs text-center text-slate-800 py-1.5 focus:border-red-600 outline-none" />
-                <span class="text-slate-400 text-xs font-bold">×</span>
-                <input type="number" :value="gridRows"
-                    @input="emit('update:gridRows', Math.max(1, +$event.target.value))" min="1" max="15"
-                    class="w-12 bg-white border border-slate-300 text-xs text-center text-slate-800 py-1.5 focus:border-red-600 outline-none" />
-            </div>
 
-            <!-- Margin & Guides -->
-            <div class="hidden lg:flex items-center gap-1.5 border-l border-slate-200 pl-4">
-                <Ruler class="w-4 h-4 text-slate-400" title="Margin & Guides" />
-                <input type="range" :value="marginMm" @input="emit('update:marginMm', +$event.target.value)" min="0"
-                    max="30" class="w-16 h-1 bg-slate-200 accent-red-600 appearance-none rounded" />
-                <span class="text-xs text-slate-600 w-8 font-medium">{{ marginMm }}mm</span>
-                
-                <div class="h-4 border-l border-slate-200 mx-1"></div>
 
-                <button @click="emit('update:guideMode', guideMode === 'none' ? 'crop' : guideMode === 'crop' ? 'full' : 'none')"
-                    class="flex items-center px-1.5 py-1 text-[11px] gap-1 font-medium border border-transparent hover:bg-slate-50 transition-colors justify-center rounded"
-                    :class="guideMode !== 'none' ? 'text-red-600 bg-red-50 border-red-200' : 'text-slate-500'">
-                    <Scan v-if="guideMode === 'crop'" class="w-3.5 h-3.5" />
-                    <Grid3x3 v-else-if="guideMode === 'full'" class="w-3.5 h-3.5" />
-                    <Scan v-else class="w-3.5 h-3.5 opacity-50" />
-                    <span class="w-8 text-left">{{ guideMode === 'crop' ? 'Crop' : guideMode === 'full' ? 'Full' : 'Off' }}</span>
-                </button>
-            </div>
 
-            <!-- Line Spacing -->
-            <div class="hidden lg:flex items-center gap-1.5 border-l border-slate-200 pl-4">
-                <AlignVerticalSpaceAround class="w-4 h-4 text-slate-400" title="Line Spacing" />
-                <select :value="lineSpacing" @change="emit('update:lineSpacing', +$event.target.value)"
-                    class="bg-white border border-slate-300 text-xs text-slate-800 py-1.5 focus:border-red-600 outline-none">
-                    <option :value="1.0">1.0</option>
-                    <option :value="1.15">1.15</option>
-                    <option :value="1.5">1.5</option>
-                    <option :value="2.0">2.0</option>
-                </select>
-            </div>
 
             <!-- Actions -->
             <div class="flex items-center gap-2 border-l border-slate-200 pl-4">

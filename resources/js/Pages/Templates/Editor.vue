@@ -10,6 +10,7 @@ import FloatingToolbar from '@/Components/Editor/FloatingToolbar.vue';
 import EditorCanvas from '@/Components/Editor/EditorCanvas.vue';
 import WidgetSidebar from '@/Components/Editor/WidgetSidebar.vue';
 import PropertiesPanel from '@/Components/Editor/PropertiesPanel.vue';
+import EditorToast from '@/Components/Editor/EditorToast.vue';
 import { WIDGET_DEFAULTS } from '@/Data/widgets';
 
 const props = defineProps({ templateSlug: String });
@@ -32,6 +33,8 @@ const selectedWidgetPath = ref(null); // Array like [wIdx] or [wIdx, colIdx, chi
 const canvasRef = ref(null);
 const scrollContainerRef = ref(null);
 const isExporting = ref(false);
+const toastRef = ref(null);
+const isDirty = ref(false);
 
 // Widgets per cell (array of arrays)
 const cells = ref([[]]);
@@ -81,8 +84,67 @@ watch(cells, () => saveHistory(), { deep: true, immediate: true });
 const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value < history.value.length - 1);
 
+// ─── LocalStorage Auto-save ───
+const STORAGE_KEY = computed(() => `printcraft-editor-${props.templateSlug}`);
+let autoSaveTimer = null;
+
+function autoSave() {
+    if (!isDirty.value) return;
+    try {
+        const state = {
+            cells: cells.value,
+            paperSize: paperSize.value,
+            orientation: orientation.value,
+            gridCols: gridCols.value,
+            gridRows: gridRows.value,
+            marginMm: marginMm.value,
+            guideMode: guideMode.value,
+            lineSpacing: lineSpacing.value,
+            savedAt: Date.now(),
+        };
+        localStorage.setItem(STORAGE_KEY.value, JSON.stringify(state));
+        isDirty.value = false;
+    } catch (e) { /* quota exceeded or private mode */ }
+}
+
+function loadSavedState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY.value);
+        if (!raw) return null;
+        const state = JSON.parse(raw);
+        // Only restore if saved less than 24h ago
+        if (state.savedAt && Date.now() - state.savedAt < 86400000) return state;
+        localStorage.removeItem(STORAGE_KEY.value);
+    } catch (e) { /* corrupt data */ }
+    return null;
+}
+
+function handleBeforeUnload(e) {
+    if (isDirty.value) {
+        autoSave();
+        e.preventDefault();
+        e.returnValue = '';
+    }
+}
+
+watch(cells, () => { isDirty.value = true; }, { deep: true });
+
 onMounted(() => {
-    if (template.value) {
+    // Try restoring saved state first
+    const saved = loadSavedState();
+
+    if (saved && saved.cells?.length) {
+        cells.value = saved.cells;
+        paperSize.value = saved.paperSize || paperSize.value;
+        orientation.value = saved.orientation || orientation.value;
+        gridCols.value = saved.gridCols || gridCols.value;
+        gridRows.value = saved.gridRows || gridRows.value;
+        marginMm.value = saved.marginMm ?? marginMm.value;
+        guideMode.value = saved.guideMode || guideMode.value;
+        lineSpacing.value = saved.lineSpacing || lineSpacing.value;
+        isDirty.value = false;
+        nextTick(() => toastRef.value?.show('Sesi sebelumnya dipulihkan', 'save'));
+    } else if (template.value) {
         paperSize.value = template.value.paperSize;
         orientation.value = template.value.orientation;
         gridCols.value = template.value.gridCols;
@@ -117,12 +179,18 @@ onMounted(() => {
             cells.value = Array.from({ length: count }, () => JSON.parse(JSON.stringify(initialWidgets)));
         }
     }
-    
+
     window.addEventListener('keydown', handleKeydown, { passive: false });
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    autoSaveTimer = setInterval(autoSave, 3000);
 });
 
 onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    if (autoSaveTimer) clearInterval(autoSaveTimer);
+    // Intentional navigation → clear saved state so next visit starts fresh
+    localStorage.removeItem(STORAGE_KEY.value);
 });
 
 function addPage() {
@@ -139,8 +207,12 @@ function removePage() {
 }
 
 const totalPagesCount = computed(() => {
-    const count = gridCols.value * gridRows.value;
-    return Math.max(1, Math.ceil(cells.value.length / count));
+    const cellsPerPage = gridCols.value * gridRows.value;
+    // If template has fixed records (like calendar 12 months), use that count
+    if (template.value?.enableGrid === false && template.value?.defaultPages) {
+        return Math.max(1, Math.ceil(template.value.defaultPages / cellsPerPage));
+    }
+    return Math.max(1, Math.ceil(cells.value.length / cellsPerPage));
 });
 
 watch([gridCols, gridRows], ([cols, rows]) => {
@@ -153,6 +225,18 @@ watch([gridCols, gridRows], ([cols, rows]) => {
         cells.value = cells.value.slice(0, count);
     }
 });
+
+function updateQuantity(newCount) {
+    if (newCount === cells.value.length) return;
+    if (newCount > cells.value.length) {
+        const master = JSON.stringify(cells.value[0] || []);
+        const newCells = Array.from({ length: newCount - cells.value.length }, () => JSON.parse(master));
+        cells.value = [...cells.value, ...newCells];
+    } else {
+        cells.value = cells.value.slice(0, newCount);
+    }
+    isDirty.value = true;
+}
 
 const selectedWidget = computed(() => {
     if (selectedCellIndex.value === null || !selectedWidgetPath.value) return null;
@@ -208,25 +292,69 @@ function removeWidget(path) {
     selectedWidgetPath.value = null;
 }
 
-function updateWidget(path, updates, cellIndex = null) {
-    const targetCellIdx = cellIndex !== null ? cellIndex : selectedCellIndex.value;
+function duplicateWidget(path) {
+    if (!path || !path.length) return;
 
-    function applyUpdate(cell) {
+    function applyDuplicate(cell) {
         if (!cell || !path || !path.length) return;
         if (path.length === 1) {
-            if (cell[path[0]]) cell[path[0]] = { ...cell[path[0]], ...updates };
+            const original = cell[path[0]];
+            if (original) {
+                cell.splice(path[0] + 1, 0, JSON.parse(JSON.stringify(original)));
+            }
         } else if (path.length === 3) {
-            const w = cell[path[0]];
-            if (w?.children?.[path[1]]?.[path[2]]) {
-                w.children[path[1]][path[2]] = { ...w.children[path[1]][path[2]], ...updates };
+            const parent = cell[path[0]];
+            if (parent?.children?.[path[1]]) {
+                const original = parent.children[path[1]][path[2]];
+                if (original) {
+                    parent.children[path[1]].splice(path[2] + 1, 0, JSON.parse(JSON.stringify(original)));
+                }
             }
         }
     }
 
     if (isSynced.value) {
-        cells.value.forEach(applyUpdate);
+        cells.value.forEach(applyDuplicate);
     } else {
-        applyUpdate(cells.value[targetCellIdx]);
+        applyDuplicate(cells.value[selectedCellIndex.value]);
+    }
+
+    // Select the newly duplicated widget
+    const newPath = [...path];
+    newPath[newPath.length - 1]++;
+    selectedWidgetPath.value = newPath;
+
+    toastRef.value?.show('Widget diduplikasi', 'copy');
+}
+
+function updateWidget(path, updates, cellIndex = null) {
+    const targetCellIdx = cellIndex !== null ? cellIndex : selectedCellIndex.value;
+    const PROTECTED_KEYS = ['month', 'year', 'day', 'date', 'currentMonth', 'currentYear'];
+
+    function applyUpdate(cell, index) {
+        if (!cell || !path || !path.length) return;
+        
+        // If syncing, we only want to apply updates that are NOT protected
+        // or if we are updating the target cell itself
+        const filteredUpdates = { ...updates };
+        if (isSynced.value && index !== targetCellIdx) {
+            PROTECTED_KEYS.forEach(key => delete filteredUpdates[key]);
+        }
+
+        if (path.length === 1) {
+            if (cell[path[0]]) cell[path[0]] = { ...cell[path[0]], ...filteredUpdates };
+        } else if (path.length === 3) {
+            const w = cell[path[0]];
+            if (w?.children?.[path[1]]?.[path[2]]) {
+                w.children[path[1]][path[2]] = { ...w.children[path[1]][path[2]], ...filteredUpdates };
+            }
+        }
+    }
+
+    if (isSynced.value) {
+        cells.value.forEach((cell, idx) => applyUpdate(cell, idx));
+    } else {
+        applyUpdate(cells.value[targetCellIdx], targetCellIdx);
     }
 }
 
@@ -276,7 +404,7 @@ function handleKeydown(e) {
         zoom.value = Math.max(0.3, Math.min(2, zoom.value + delta));
         return;
     }
-    
+
     // Fit to page (Ctrl+0)
     if ((e.ctrlKey || e.metaKey) && e.key === '0') {
         e.preventDefault();
@@ -288,6 +416,7 @@ function handleKeydown(e) {
     if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditingText && selectedWidgetPath.value) {
         e.preventDefault();
         removeWidget(selectedWidgetPath.value);
+        toastRef.value?.show('Widget dihapus', 'delete');
         return;
     }
 
@@ -295,6 +424,7 @@ function handleKeydown(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !isEditingText) {
         e.preventDefault();
         undo();
+        toastRef.value?.show('Undo', 'undo');
         return;
     }
 
@@ -302,6 +432,7 @@ function handleKeydown(e) {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey)) && !isEditingText) {
         e.preventDefault();
         redo();
+        toastRef.value?.show('Redo', 'redo');
         return;
     }
 
@@ -309,6 +440,14 @@ function handleKeydown(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'c' && !isEditingText && selectedWidget.value) {
         e.preventDefault();
         clipboard.value = JSON.parse(JSON.stringify(selectedWidget.value));
+        toastRef.value?.show('Widget disalin', 'copy');
+        return;
+    }
+
+    // Duplicate (Ctrl+D)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !isEditingText && selectedWidgetPath.value) {
+        e.preventDefault();
+        duplicateWidget(selectedWidgetPath.value);
         return;
     }
 
@@ -321,6 +460,7 @@ function handleKeydown(e) {
         } else {
             cells.value[selectedCellIndex.value].push(JSON.parse(JSON.stringify(newWidget)));
         }
+        toastRef.value?.show('Widget ditempel', 'paste');
         return;
     }
 }
@@ -332,11 +472,11 @@ function handleFitPage() {
     const availableWidth = scrollContainerRef.value.clientWidth - paddingX;
     const availableHeight = scrollContainerRef.value.clientHeight - paddingY;
     const dims = getPaperDimensionsPx(paperSize.value, orientation.value);
-    
+
     // Fit to whichever dimension is more restrictive (width or height)
     const scaleX = availableWidth / dims.width;
     const scaleY = availableHeight / dims.height;
-    
+
     const scale = Math.min(scaleX, scaleY);
     zoom.value = Math.max(0.3, Math.min(2, scale));
 }
@@ -349,65 +489,57 @@ function handleFitPage() {
     <AppLayout hideHeader hideFooter>
         <div class="flex flex-col h-screen bg-slate-100 print:block print:h-auto print:overflow-visible">
             <!-- Main Header Toolbar -->
-            <EditorToolbar
-                v-model:paperSize="paperSize"
-                v-model:orientation="orientation"
-                v-model:gridCols="gridCols"
-                v-model:gridRows="gridRows"
-                v-model:marginMm="marginMm"
-                v-model:lineSpacing="lineSpacing"
-                v-model:guideMode="guideMode"
-                :template="template"
-                :category="category"
-                :isExporting="isExporting"
-                @print="handlePrint"
-                @export-pdf="handleExportPdf"
-            />
+            <EditorToolbar v-model:paperSize="paperSize" v-model:orientation="orientation" v-model:gridCols="gridCols"
+                v-model:gridRows="gridRows" v-model:marginMm="marginMm" v-model:lineSpacing="lineSpacing"
+                v-model:guideMode="guideMode" :printQuantity="cells.length" :isSynced="isSynced" :template="template"
+                :category="category" :isExporting="isExporting" @update:printQuantity="updateQuantity"
+                @print="handlePrint" @export-pdf="handleExportPdf" />
 
             <div class="flex flex-1 overflow-hidden relative print:block print:overflow-visible">
                 <!-- Widget Sidebar -->
                 <WidgetSidebar class="no-print hidden lg:block" @add-widget="addWidget" />
 
                 <!-- Canvas Wrapper -->
-                <div class="flex-1 flex flex-col relative overflow-hidden bg-slate-200 print:bg-white print:block print:overflow-visible">
-                    
+                <div
+                    class="flex-1 flex flex-col relative overflow-hidden bg-slate-200 print:bg-white print:block print:overflow-visible">
+
                     <!-- Canvas Area -->
                     <div ref="scrollContainerRef"
                         class="flex-1 overflow-auto flex flex-col p-4 md:p-8 relative print:static print:p-0 print:block print:overflow-visible"
-                        @wheel.ctrl.prevent="handleWheelZoom"
-                        @wheel.meta.prevent="handleWheelZoom"
+                        @wheel.ctrl.prevent="handleWheelZoom" @wheel.meta.prevent="handleWheelZoom"
                         @click="selectedWidgetPath = null">
                         <div class="absolute inset-0 pattern-dots opacity-50 pointer-events-none no-print"></div>
-                        <EditorCanvas ref="canvasRef" :paperSize="paperSize" :orientation="orientation" :gridCols="gridCols"
-                        :gridRows="gridRows" :marginMm="marginMm" :guideMode="guideMode" :zoom="zoom"
-                        :isSynced="isSynced" :lineSpacing="lineSpacing" :cells="cells"
-                            :selectedWidgetPath="selectedWidgetPath" :selectedCellIndex="selectedCellIndex"
-                            @select-widget="handleSelectWidget" @update-widget="updateWidget" @remove-widget="removeWidget"
+                        <EditorCanvas ref="canvasRef" :paperSize="paperSize" :orientation="orientation"
+                            :gridCols="gridCols" :gridRows="gridRows" :marginMm="marginMm" :guideMode="guideMode"
+                            :zoom="zoom" :isSynced="isSynced" :lineSpacing="lineSpacing" :cells="cells"
+                            :printQuantity="printQuantity" :selectedWidgetPath="selectedWidgetPath"
+                            :selectedCellIndex="selectedCellIndex" @select-widget="handleSelectWidget"
+                            @update-widget="updateWidget" @remove-widget="removeWidget"
                             @reorder-widgets="handleReorderWidgets" class="z-10 relative" />
                     </div>
 
                     <!-- Floating Bottom Toolbar -->
-                    <FloatingToolbar
-                        v-model:isSynced="isSynced"
-                        v-model:zoom="zoom"
-                        :totalPages="totalPagesCount"
-                        :canUndo="canUndo"
-                        :canRedo="canRedo"
-                        @add-page="addPage"
-                        @remove-page="removePage"
-                        @fit-page="handleFitPage"
-                        @undo="undo"
-                        @redo="redo"
-                    />
+                    <FloatingToolbar v-model:isSynced="isSynced" v-model:zoom="zoom" :totalPages="totalPagesCount"
+                        :canUndo="canUndo" :canRedo="canRedo" :template="template" @add-page="addPage"
+                        @remove-page="removePage" @fit-page="handleFitPage"
+                        @undo="() => { undo(); toastRef?.show('Undo', 'undo'); }"
+                        @redo="() => { redo(); toastRef?.show('Redo', 'redo'); }" />
                 </div>
 
                 <!-- Properties Panel -->
-                <PropertiesPanel class="no-print hidden lg:block"
-                    :widget="selectedWidget" :template="template"
+                <PropertiesPanel class="no-print hidden lg:block" :widget="selectedWidget" :template="template"
+                    :gridCols="gridCols" :gridRows="gridRows" :printQuantity="cells.length" :marginMm="marginMm"
+                    :guideMode="guideMode" :lineSpacing="lineSpacing" @update:gridCols="(val) => gridCols = val"
+                    @update:gridRows="(val) => gridRows = val" @update:printQuantity="updateQuantity"
+                    @update:marginMm="(val) => marginMm = val" @update:guideMode="(val) => guideMode = val"
+                    @update:lineSpacing="(val) => lineSpacing = val"
                     @update="(updates) => updateWidget(selectedWidgetPath, updates)" @close="selectedWidgetPath = null"
                     @remove="removeWidget(selectedWidgetPath)" />
             </div>
         </div>
+
+        <!-- Toast Notifications -->
+        <EditorToast ref="toastRef" />
     </AppLayout>
 </template>
 

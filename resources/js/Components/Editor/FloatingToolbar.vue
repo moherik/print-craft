@@ -7,6 +7,7 @@ const props = defineProps({
     zoom: { type: Number, default: 1 },
     canUndo: Boolean,
     canRedo: Boolean,
+    template: Object,
 });
 
 const emit = defineEmits([
@@ -20,7 +21,8 @@ function adjustZoom(delta) {
 </script>
 
 <template>
-    <div class="no-print absolute bottom-6 left-1/2 -translate-x-1/2 bg-white border border-slate-200 px-3 py-2 z-40 shadow-lg rounded-lg flex items-center gap-1 max-w-[95vw] overflow-x-auto">
+    <div
+        class="no-print absolute bottom-6 left-1/2 -translate-x-1/2 bg-white border border-slate-200 px-3 py-2 z-40 shadow-lg rounded-lg flex items-center gap-1 max-w-[95vw] overflow-x-auto">
 
         <!-- Undo / Redo -->
         <div class="hidden lg:flex items-center gap-0.5">
@@ -48,29 +50,41 @@ function adjustZoom(delta) {
 
         <div class="w-px h-5 bg-slate-200 mx-1"></div>
 
-        <!-- Page Controls -->
-        <div class="flex items-center gap-1">
-            <button @click="emit('remove-page')" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-20" :disabled="totalPages <= 1">
-                <Minus class="w-4 h-4" />
-            </button>
-            <div class="text-[10px] font-bold text-slate-600 uppercase tracking-wider min-w-[70px] text-center">
-                {{ totalPages }} Halaman
+        <!-- Page Controls (Hide if locked) -->
+        <template v-if="props.template?.enableGrid !== false">
+            <div class="flex items-center gap-1">
+                <button @click="emit('remove-page')"
+                    class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-20"
+                    :disabled="totalPages <= 1">
+                    <Minus class="w-4 h-4" />
+                </button>
+                <div class="text-[10px] font-bold text-slate-600 uppercase tracking-wider min-w-[70px] text-center">
+                    {{ totalPages }} Halaman
+                </div>
+                <button @click="emit('add-page')"
+                    class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                    <Plus class="w-4 h-4" />
+                </button>
             </div>
-            <button @click="emit('add-page')" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
-                <Plus class="w-4 h-4" />
-            </button>
-        </div>
-
-        <div class="w-px h-5 bg-slate-200 mx-1"></div>
+            <div class="w-px h-5 bg-slate-200 mx-1"></div>
+        </template>
 
         <!-- Zoom -->
         <div class="flex items-center gap-0.5">
-            <button @click="emit('fit-page')" title="Fit to Page (Ctrl+0)" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors mr-0.5">
+            <button @click="emit('fit-page')" title="Fit to Page (Ctrl+0)"
+                class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors mr-0.5">
                 <Maximize class="w-4 h-4" />
             </button>
-            <button @click="adjustZoom(-0.1)" class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded transition-colors"><ZoomOut class="w-4 h-4" /></button>
-            <span class="text-xs text-slate-700 w-10 text-center font-medium tabular-nums">{{ Math.round(zoom * 100) }}%</span>
-            <button @click="adjustZoom(0.1)" class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded transition-colors"><ZoomIn class="w-4 h-4" /></button>
+            <button @click="adjustZoom(-0.1)"
+                class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded transition-colors">
+                <ZoomOut class="w-4 h-4" />
+            </button>
+            <span class="text-xs text-slate-700 w-10 text-center font-medium tabular-nums">{{ Math.round(zoom * 100)
+                }}%</span>
+            <button @click="adjustZoom(0.1)"
+                class="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded transition-colors">
+                <ZoomIn class="w-4 h-4" />
+            </button>
         </div>
 
     </div>

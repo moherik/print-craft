@@ -14,13 +14,16 @@ const props = defineProps({
     selectedPath: { type: Array, default: null },
     compact: Boolean,
     cellIndex: { type: Number, default: 0 },
+    selectedCellIndex: { type: Number, default: 0 },
+    isSynced: { type: Boolean, default: true }
 });
 
 const emit = defineEmits(['select-widget', 'update-widget']);
 
 const isSelected = computed(() => {
     if (!props.selectedPath || !props.path) return false;
-    return props.selectedPath.join('-') === props.path.join('-');
+    const pathMatches = props.selectedPath.join('-') === props.path.join('-');
+    return pathMatches && props.cellIndex === props.selectedCellIndex;
 });
 
 // ─── Calendar Helpers ───
@@ -155,8 +158,6 @@ const textStyles = computed(() => {
     };
 });
 
-
-
 // ─── Image Widget ───
 const imageSrc = ref(props.widget.src || null);
 function handleImageUpload(e) {
@@ -225,17 +226,26 @@ function addChild(colIndex, type = 'text') {
     emit('update-widget', props.path, { children: newChildren });
 }
 
+// In synced mode, only the selected cell's widgets should be focusable/interactive
+const isInteractive = computed(() => {
+    if (!props.isSynced) return true;
+    return props.cellIndex === props.selectedCellIndex;
+});
+
 function handleFocus() {
-    if (!isSelected.value) {
+    if (isInteractive.value && !isSelected.value) {
         emit('select-widget', props.path);
     }
 }
 </script>
 
 <template>
-    <div @click.stop="emit('select-widget', path)" @focus="handleFocus" :tabindex="isSelected ? -1 : 0"
+    <div @click.stop="emit('select-widget', path)" @focus="handleFocus"
+        :tabindex="(isInteractive && !isSelected) ? 0 : -1"
         class="widget-renderer relative group/widget cursor-pointer outline-none focus:ring-2 focus:ring-red-600/50 focus:ring-offset-1"
-        :class="{ 'ring-2 ring-red-600 ring-offset-1 print:!ring-0 print:!ring-offset-0': isSelected }">
+        :class="[
+            { 'ring-2 ring-red-600 ring-offset-1 print:!ring-0 print:!ring-offset-0': isSelected }
+        ]">
 
         <!-- TEXT -->
         <div v-if="widget.type === 'text'" class="w-full relative">
@@ -335,6 +345,7 @@ function handleFocus() {
 
                     <WidgetRenderer v-for="(child, chi) in (widget.children[ci] || [])" :key="chi" :widget="child"
                         :path="[...path, ci, chi]" :selectedPath="selectedPath" :compact="compact"
+                        :cellIndex="cellIndex" :selectedCellIndex="selectedCellIndex" :isSynced="isSynced"
                         @select-widget="(p) => emit('select-widget', p)"
                         @update-widget="(p, val) => emit('update-widget', p, val)" />
 
