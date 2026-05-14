@@ -1,8 +1,12 @@
 import {
-    Building2,
-    ClipboardList,
-    Heart,
-    GraduationCap,
+    FileText,
+    Tag,
+    CreditCard,
+    Calendar,
+    CheckSquare,
+    Image as ImageIcon,
+    BookOpen,
+    Box,
 } from "lucide-vue-next";
 
 /**
@@ -22,118 +26,68 @@ export const PAPER_SIZES = {
 
 export const CATEGORIES = [
     {
-        id: "bisnis-logistik",
-        name: "Bisnis & Logistik",
-        slug: "bisnis-logistik",
-        description:
-            "Label pengiriman, invoice, kartu nama, dan label produk untuk kebutuhan bisnis.",
-        icon: "Building2",
-        iconComponent: Building2,
-        color: "#DC2626", // red-600
-        bgClass: "bg-red-50",
-        textClass: "text-red-600",
-        subcategories: [
-            {
-                id: "label-pengiriman",
-                name: "Label Pengiriman & Barcode",
-                slug: "label-pengiriman",
-            },
-            {
-                id: "invoice-kwitansi",
-                name: "Invoice & Kwitansi",
-                slug: "invoice-kwitansi",
-            },
-            { id: "kartu-nama", name: "Kartu Nama", slug: "kartu-nama" },
-            {
-                id: "label-harga",
-                name: "Label Harga & Produk",
-                slug: "label-harga",
-            },
-        ],
+        id: "invoice",
+        name: "Invoice & Kwitansi",
+        slug: "invoice",
+        description: "Template penagihan profesional dan bukti pembayaran.",
+        icon: "FileText",
+        iconComponent: FileText,
     },
     {
-        id: "manajemen-dokumentasi",
-        name: "Manajemen & Dokumentasi",
-        slug: "manajemen-dokumentasi",
-        description:
-            "Jurnal, checklist, dan laporan inventaris untuk pencatatan profesional.",
-        icon: "ClipboardList",
-        iconComponent: ClipboardList,
-        color: "#DC2626",
-        bgClass: "bg-red-50",
-        textClass: "text-red-600",
-        subcategories: [
-            {
-                id: "jurnal-log",
-                name: "Jurnal & Log Harian",
-                slug: "jurnal-log",
-            },
-            {
-                id: "checklist",
-                name: "Checklist Operasional",
-                slug: "checklist",
-            },
-            {
-                id: "inventaris",
-                name: "Laporan Inventaris",
-                slug: "inventaris",
-            },
-        ],
+        id: "label",
+        name: "Label & Barcode",
+        slug: "label",
+        description: "Label pengiriman, label harga, dan kode QR.",
+        icon: "Tag",
+        iconComponent: Tag,
     },
     {
-        id: "personal-keluarga",
-        name: "Personal & Keluarga",
-        slug: "personal-keluarga",
-        description:
-            "Planner, kalender, kartu ucapan, label dapur, dan foto untuk kebutuhan rumah tangga.",
-        icon: "Heart",
-        iconComponent: Heart,
-        color: "#DC2626",
-        bgClass: "bg-red-50",
-        textClass: "text-red-600",
-        subcategories: [
-            {
-                id: "planner-kalender",
-                name: "Planner & Kalender",
-                slug: "planner-kalender",
-            },
-            {
-                id: "kartu-ucapan",
-                name: "Kartu Milestone & Ucapan",
-                slug: "kartu-ucapan",
-            },
-            {
-                id: "label-dapur",
-                name: "Label Dapur & Storage",
-                slug: "label-dapur",
-            },
-            { id: "photo-frame", name: "Photo Frame", slug: "photo-frame" },
-            {
-                id: "passport-photo",
-                name: "Passport Photo & ID",
-                slug: "passport-photo",
-            },
-        ],
+        id: "kartu-nama",
+        name: "Kartu Nama",
+        slug: "kartu-nama",
+        description: "Identitas profesional untuk networking dan branding.",
+        icon: "CreditCard",
+        iconComponent: CreditCard,
     },
     {
-        id: "edukasi-kreatif",
-        name: "Edukasi & Kreatif",
-        slug: "edukasi-kreatif",
-        description:
-            "Flashcards, sertifikat, dan materi edukasi untuk pembelajaran interaktif.",
-        icon: "GraduationCap",
-        iconComponent: GraduationCap,
-        color: "#DC2626",
-        bgClass: "bg-red-50",
-        textClass: "text-red-600",
-        subcategories: [
-            { id: "flashcards", name: "Flashcards", slug: "flashcards" },
-            {
-                id: "sertifikat",
-                name: "Sertifikat & Piagam",
-                slug: "sertifikat",
-            },
-        ],
+        id: "kalender-planner",
+        name: "Kalender & Planner",
+        slug: "kalender-planner",
+        description: "Perencanaan harian, bulanan, dan tracker kebiasaan.",
+        icon: "Calendar",
+        iconComponent: Calendar,
+    },
+    {
+        id: "daftar-hadir",
+        name: "Absensi & Checklist",
+        slug: "daftar-hadir",
+        description: "Pencatatan kehadiran dan daftar tugas operasional.",
+        icon: "CheckSquare",
+        iconComponent: CheckSquare,
+    },
+    {
+        id: "inventaris",
+        name: "Laporan Inventaris",
+        slug: "inventaris",
+        description: "Pencatatan stok barang dan manajemen gudang.",
+        icon: "Box",
+        iconComponent: Box,
+    },
+    {
+        id: "foto",
+        name: "Pas Foto",
+        slug: "foto",
+        description: "Template cetak foto untuk kebutuhan identitas.",
+        icon: "Image",
+        iconComponent: ImageIcon,
+    },
+    {
+        id: "edukasi",
+        name: "Edukasi & Belajar",
+        slug: "edukasi",
+        description: "Materi belajar, flashcard, dan kertas khusus sekolah.",
+        icon: "BookOpen",
+        iconComponent: BookOpen,
     },
 ];
 
@@ -193,8 +147,7 @@ export const TEMPLATES = [
         slug: "invoice-profesional",
         description:
             "Desain invoice profesional dengan tabel dinamis. Bisa mengatur jumlah baris item secara otomatis.",
-        categoryId: "bisnis-logistik",
-        subcategoryId: "invoice-kwitansi",
+        categoryId: "invoice",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 1,
@@ -345,9 +298,8 @@ export const TEMPLATES = [
         name: "Kartu Nama Standard",
         slug: "kartu-nama-2x5",
         description:
-            "Grid 2x5 kartu nama standar (90×55mm) dalam satu lembar A4 dengan garis potong presisi.",
-        categoryId: "bisnis-logistik",
-        subcategoryId: "kartu-nama",
+            "Grid 2x5 kartu nama standar (90x55mm) dalam satu lembar A4 dengan garis potong presisi.",
+        categoryId: "kartu-nama",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 2,
@@ -398,8 +350,7 @@ export const TEMPLATES = [
         slug: "label-harga-grid",
         description:
             "Layout grid 3×7 label harga kecil dengan nama produk, harga, dan barcode.",
-        categoryId: "bisnis-logistik",
-        subcategoryId: "label-harga",
+        categoryId: "label",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 3,
@@ -440,8 +391,7 @@ export const TEMPLATES = [
         slug: "jurnal-harian",
         description:
             "Layout jurnal bergaris untuk pencatatan harian. Cocok untuk log kegiatan atau catatan pribadi.",
-        categoryId: "manajemen-dokumentasi",
-        subcategoryId: "jurnal-log",
+        categoryId: "edukasi",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 1,
@@ -477,8 +427,7 @@ export const TEMPLATES = [
         slug: "checklist-operasional",
         description:
             "Daftar periksa satu halaman untuk rutinitas harian, pengecekan sistem, atau jadwal perawatan.",
-        categoryId: "manajemen-dokumentasi",
-        subcategoryId: "checklist",
+        categoryId: "daftar-hadir",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 1,
@@ -516,8 +465,7 @@ export const TEMPLATES = [
         slug: "laporan-inventaris",
         description:
             "Tabel bersih dengan kolom sisa stok, tanggal masuk, dan kondisi barang.",
-        categoryId: "manajemen-dokumentasi",
-        subcategoryId: "inventaris",
+        categoryId: "inventaris",
         paperSize: "A4",
         orientation: "landscape",
         gridCols: 1,
@@ -568,8 +516,7 @@ export const TEMPLATES = [
         slug: "planner-bulanan",
         description:
             "Layout kalender bulanan yang customizable. Bisa memasukkan hari libur dan acara pribadi.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "planner-kalender",
+        categoryId: "kalender-planner",
         paperSize: "A4",
         orientation: "landscape",
         gridCols: 1,
@@ -641,8 +588,7 @@ export const TEMPLATES = [
         slug: "planner-mingguan",
         description:
             "Layout planner mingguan dengan 7 kolom (Senin-Minggu) dan area catatan.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "planner-kalender",
+        categoryId: "kalender-planner",
         paperSize: "A4",
         orientation: "landscape",
         gridCols: 1,
@@ -667,8 +613,7 @@ export const TEMPLATES = [
         slug: "kartu-ucapan-a6",
         description:
             "Desain kartu lipat A6 untuk merayakan momen keluarga. Print di A4, lipat jadi kartu.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "kartu-ucapan",
+        categoryId: "edukasi",
         paperSize: "A4",
         orientation: "landscape",
         gridCols: 2,
@@ -701,8 +646,7 @@ export const TEMPLATES = [
         slug: "label-dapur",
         description:
             "Label tipografi minimalis untuk wadah penyimpanan makanan dan perlengkapan dapur.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "label-dapur",
+        categoryId: "label",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 3,
@@ -734,8 +678,7 @@ export const TEMPLATES = [
         slug: "photo-frame-classic",
         description:
             "Template bingkai foto klasik. Upload foto, masukkan ke bingkai, dan download sebagai PDF.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "photo-frame",
+        categoryId: "foto",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 1,
@@ -760,8 +703,7 @@ export const TEMPLATES = [
         slug: "passport-photo-3x4",
         description:
             "Layout foto passport ukuran 3×4cm dalam satu lembar A4. Cocok untuk kebutuhan dokumen resmi.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "passport-photo",
+        categoryId: "foto",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 5,
@@ -776,8 +718,7 @@ export const TEMPLATES = [
         name: "Foto Passport 4x6",
         slug: "passport-photo-4x6",
         description: "Layout foto passport ukuran 4×6cm dalam satu lembar A4.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "passport-photo",
+        categoryId: "foto",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 4,
@@ -793,8 +734,7 @@ export const TEMPLATES = [
         slug: "polaroid-instax",
         description:
             "Template foto gaya Polaroid/Instax Mini. Print di A4 lalu potong.",
-        categoryId: "personal-keluarga",
-        subcategoryId: "passport-photo",
+        categoryId: "foto",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 3,
@@ -823,8 +763,7 @@ export const TEMPLATES = [
         slug: "flashcard-2x3",
         description:
             "Layout flashcard 2×3 per halaman. Sisi depan untuk pertanyaan/gambar, sisi belakang untuk jawaban.",
-        categoryId: "edukasi-kreatif",
-        subcategoryId: "flashcards",
+        categoryId: "edukasi",
         paperSize: "A4",
         orientation: "landscape",
         gridCols: 3,
@@ -856,8 +795,7 @@ export const TEMPLATES = [
         slug: "sertifikat-landscape",
         description:
             "Layout sertifikat landscape dengan bingkai dekoratif. Teks bisa diganti secara dinamis.",
-        categoryId: "edukasi-kreatif",
-        subcategoryId: "sertifikat",
+        categoryId: "edukasi",
         paperSize: "A4",
         orientation: "landscape",
         gridCols: 1,
@@ -960,7 +898,7 @@ export function getTemplatesByCategory(categoryId) {
  * Get templates by subcategory
  */
 export function getTemplatesBySubcategory(subcategoryId) {
-    return TEMPLATES.filter((t) => t.subcategoryId === subcategoryId);
+    return [];
 }
 
 /**

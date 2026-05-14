@@ -48,12 +48,12 @@ const steps = [
                         <span class="text-red-600">Mudah & Cepat</span>
                     </h1>
 
-                    <p class="text-lg text-slate-600 mb-10 leading-relaxed" style="animation: slideUp 0.4s ease-out 0.1s forwards; opacity: 0;">
+                    <p class="text-lg text-slate-600 mb-10 leading-relaxed">
                         Buat label pengiriman, invoice, kartu nama, planner, dan foto dokumen langsung dari browser. Tanpa perlu software desain yang rumit.
                     </p>
 
                     <!-- CTA Button -->
-                    <div class="flex justify-center mb-8" style="animation: slideUp 0.4s ease-out 0.2s forwards; opacity: 0;">
+                    <div class="flex justify-center mb-8">
                         <Link :href="route('templates.index')" class="btn-primary py-4 px-10 text-lg">
                             Lihat Semua Template
                             <ArrowRight class="w-5 h-5 ml-2" />
@@ -68,7 +68,7 @@ const steps = [
         <section class="py-16 bg-red-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-12">
-                    <h2 class="section-heading">Cara Penggunaan</h2>
+                    <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Cara Penggunaan</h2>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
@@ -92,8 +92,8 @@ const steps = [
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-end justify-between mb-8">
                     <div>
-                        <h2 class="section-heading">Kategori Template</h2>
-                        <p class="section-subheading">Temukan layout yang sesuai dengan kebutuhan Anda.</p>
+                        <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Kategori Template</h2>
+                        <p class="text-slate-500 mt-2">Temukan layout yang sesuai dengan kebutuhan Anda.</p>
                     </div>
                     <Link :href="route('templates.index')" class="hidden sm:inline-flex btn-ghost text-sm">
                         Lihat Semua Kategori
@@ -114,12 +114,10 @@ const steps = [
                         <h3 class="font-bold text-slate-900 mb-2 group-hover:text-red-600 transition-colors">{{ cat.name }}</h3>
                         <p class="text-sm text-slate-600 leading-relaxed mb-4 line-clamp-2">{{ cat.description }}</p>
                         
-                        <div class="flex flex-wrap gap-2">
-                            <span v-for="sub in cat.subcategories.slice(0, 2)" :key="sub.id" class="badge bg-slate-100 text-slate-600 border-slate-200">
-                                {{ sub.name }}
-                            </span>
-                            <span v-if="cat.subcategories.length > 2" class="badge bg-slate-100 text-slate-500 border-slate-200">
-                                +{{ cat.subcategories.length - 2 }}
+                        <div class="mt-auto">
+                            <span class="text-xs font-bold text-red-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                Lihat Template
+                                <ArrowRight class="w-3 h-3" />
                             </span>
                         </div>
                     </Link>
@@ -132,8 +130,8 @@ const steps = [
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-end justify-between mb-8">
                     <div>
-                        <h2 class="section-heading">Template Populer</h2>
-                        <p class="section-subheading">Template yang paling banyak digunakan.</p>
+                        <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Template Populer</h2>
+                        <p class="text-slate-500 mt-2">Template yang paling banyak digunakan.</p>
                     </div>
                     <Link :href="route('templates.index')" class="hidden sm:inline-flex btn-ghost text-sm">
                         Lihat Semua Template

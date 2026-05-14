@@ -17,70 +17,69 @@ const category = computed(() => {
 </script>
 
 <template>
-    <Link
-        :href="route('templates.editor', template.slug)"
-        class="glass-card-hover group cursor-pointer overflow-hidden flex flex-col bg-white"
-    >
-        <!-- Preview Area -->
-        <div class="relative aspect-[3/4] bg-slate-100 overflow-hidden flex items-center justify-center p-6 border-b border-slate-200">
+    <Link :href="route('templates.editor', template.slug)"
+        class="glass-card-hover group cursor-pointer overflow-hidden flex flex-col bg-white border border-slate-200">
+        <!-- Preview Area (Compact) -->
+        <div
+            class="relative aspect-[4/3] bg-slate-50 overflow-hidden flex items-center justify-center p-4 border-b border-slate-100">
             <!-- Paper preview illustration -->
-            <div
-                class="relative bg-white border border-slate-300 shadow-sm transition-transform duration-300 group-hover:scale-105"
+            <div class="relative bg-white border border-slate-300 shadow-sm transition-transform duration-300 group-hover:scale-105"
                 :style="{
-                    width: template.orientation === 'landscape' ? '85%' : '65%',
-                    height: template.orientation === 'landscape' ? '60%' : '80%',
-                }"
-            >
+                    width: template.orientation === 'landscape' ? '70%' : '50%',
+                    height: template.orientation === 'landscape' ? '50%' : '70%',
+                }">
                 <!-- Grid lines preview -->
-                <div class="absolute inset-2 opacity-50">
-                    <div class="w-full h-full grid"
-                        :style="{
-                            gridTemplateColumns: `repeat(${template.gridCols}, 1fr)`,
-                            gridTemplateRows: `repeat(${template.gridRows}, 1fr)`,
-                            gap: '2px',
-                        }">
-                        <div
-                            v-for="i in template.gridCols * template.gridRows"
-                            :key="i"
-                            class="border border-dashed border-slate-300"
-                        ></div>
+                <div class="absolute inset-1.5 opacity-40">
+                    <div class="w-full h-full grid" :style="{
+                        gridTemplateColumns: `repeat(${template.gridCols}, 1fr)`,
+                        gridTemplateRows: `repeat(${template.gridRows}, 1fr)`,
+                        gap: '1px',
+                    }">
+                        <div v-for="i in template.gridCols * template.gridRows" :key="i"
+                            class="border border-dashed border-slate-300"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Orientation badge -->
-            <div class="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-1 bg-white border border-slate-200 text-slate-500 text-xs font-medium">
-                <RectangleHorizontal v-if="template.orientation === 'landscape'" class="w-3.5 h-3.5" />
-                <RectangleVertical v-else class="w-3.5 h-3.5" />
+            <!-- Orientation badge (Compact) -->
+            <div
+                class="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-white/90 border border-slate-200 text-slate-500 text-[9px] font-bold uppercase tracking-tighter">
+                <RectangleHorizontal v-if="template.orientation === 'landscape'" class="w-3 h-3" />
+                <RectangleVertical v-else class="w-3 h-3" />
                 {{ template.orientation === 'landscape' ? 'Landscape' : 'Portrait' }}
             </div>
 
-            <!-- Paper size badge -->
-            <div class="absolute top-3 left-3 px-2 py-1 bg-white border border-slate-200 text-slate-500 text-xs font-bold">
+            <!-- Paper size badge (Compact) -->
+            <div
+                class="absolute top-2 left-2 px-1.5 py-0.5 bg-white/90 border border-slate-200 text-slate-500 text-[9px] font-black uppercase tracking-tighter">
                 {{ template.paperSize }}
             </div>
 
             <!-- Hover overlay -->
-            <div class="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                <span class="px-5 py-2 bg-red-600 text-white text-sm font-bold flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 transition-all duration-200">
+            <div
+                class="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                <span
+                    class="px-4 py-1.5 bg-red-600 text-white text-[11px] font-black uppercase tracking-widest flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 transition-all duration-200">
                     Gunakan Template
-                    <ArrowRight class="w-4 h-4" />
+                    <ArrowRight class="w-3.5 h-3.5" />
                 </span>
             </div>
         </div>
 
-        <!-- Info -->
-        <div class="p-5 flex-1 flex flex-col bg-white">
-            <div class="flex items-center gap-2 mb-3">
-                <span v-if="category" class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider">
+        <!-- Info (Compact) -->
+        <div class="p-3 flex flex-col bg-white">
+            <div class="flex items-center gap-1.5 mb-1.5">
+                <span v-if="category"
+                    class="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold uppercase tracking-tight">
                     {{ category.name }}
                 </span>
-                <span class="px-2 py-1 border border-slate-200 text-slate-500 text-[10px] font-bold">
+                <span class="px-1.5 py-0.5 border border-slate-200 text-slate-400 text-[9px] font-bold">
                     {{ template.gridCols }}×{{ template.gridRows }}
                 </span>
             </div>
-            <h3 class="font-bold text-slate-900 group-hover:text-red-600 transition-colors line-clamp-1 mb-1">{{ template.name }}</h3>
-            <p class="text-sm text-slate-600 line-clamp-2 flex-1 leading-relaxed">{{ template.description }}</p>
+            <h3 class="font-bold text-slate-900 text-sm group-hover:text-red-600 transition-colors line-clamp-1">{{
+                template.name }}</h3>
+            <p class="text-[11px] text-slate-500 line-clamp-1 leading-tight mt-0.5">{{ template.description }}</p>
         </div>
     </Link>
 </template>

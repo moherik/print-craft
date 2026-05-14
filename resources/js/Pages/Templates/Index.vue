@@ -63,166 +63,98 @@ const pageTitle = computed(() => {
 </script>
 
 <template>
+
     <Head :title="pageTitle" />
 
     <AppLayout>
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <!-- Page Header -->
-            <div class="mb-8 border-b border-slate-200 pb-6">
-                <div class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+            <div class="mb-10 text-center max-w-2xl mx-auto">
+                <div
+                    class="flex items-center justify-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
                     <Link :href="route('home')" class="hover:text-red-600 transition-colors">Home</Link>
                     <span>/</span>
                     <span class="text-slate-800">{{ pageTitle }}</span>
                 </div>
-                <h1 class="text-3xl font-bold text-slate-900">{{ pageTitle }}</h1>
-                <p v-if="activeCategory" class="text-slate-600 mt-2 max-w-3xl">{{ activeCategory.description }}</p>
+                <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">{{ pageTitle }}</h1>
+                <p v-if="activeCategory" class="text-slate-500 mt-3 text-lg leading-relaxed">{{
+                    activeCategory.description }}</p>
+                <p v-else class="text-slate-500 mt-3 text-lg leading-relaxed">Pilih dari koleksi template kami yang
+                    sudah dikurasi untuk membantu kebutuhan cetak Anda.</p>
             </div>
 
-            <div class="flex flex-col lg:flex-row gap-8">
-                <!-- Sidebar Filters (Desktop) -->
-                <aside class="hidden lg:block w-64 flex-shrink-0">
-                    <div class="bg-white border border-slate-200 p-5 sticky top-20 space-y-6">
-                        <!-- Search -->
-                        <div>
-                            <label class="text-sm font-bold text-slate-900 mb-2 block">Pencarian</label>
-                            <div class="relative">
-                                <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input
-                                    v-model="searchQuery"
-                                    type="text"
-                                    placeholder="Cari template..."
-                                    class="input-field pl-9 text-sm"
-                                />
-                            </div>
+            <!-- Toolbar Filter (Compact Boxy Style) -->
+            <div class="sticky top-16 z-20 bg-white border border-slate-300 p-1.5 mb-8 shadow-sm max-w-4xl mx-auto">
+                <div class="flex flex-col md:flex-row items-stretch gap-1.5">
+                    <!-- Search -->
+                    <div class="relative flex-1">
+                        <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <input v-model="searchQuery" type="text" placeholder="Cari desain..."
+                            class="w-full bg-slate-50 border border-slate-200 pr-4 pl-9 py-2 rounded-none text-sm focus:bg-white focus:border-red-600 focus:ring-0 outline-none font-medium transition-all" />
+                    </div>
+
+                    <!-- Filters Group -->
+                    <div class="flex items-stretch gap-1.5">
+                        <!-- Category Select -->
+                        <div class="relative min-w-[150px] flex items-stretch">
+                            <SlidersHorizontal
+                                class="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                            <select v-model="selectedCategory"
+                                class="w-full bg-slate-50 border border-slate-200 pr-4 pl-9 py-2 rounded-none text-sm appearance-none focus:bg-white focus:border-red-600 focus:ring-0 outline-none cursor-pointer font-medium"
+                                style="-webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                                <option :value="null">Kategori</option>
+                                <option v-for="cat in CATEGORIES" :key="cat.id" :value="cat.slug">{{ cat.name }}
+                                </option>
+                            </select>
                         </div>
 
-                        <!-- Categories -->
-                        <div>
-                            <label class="text-sm font-bold text-slate-900 mb-3 block">Kategori</label>
-                            <div class="space-y-1">
-                                <button
-                                    @click="selectedCategory = null"
-                                    class="w-full text-left px-3 py-2 text-sm transition-colors border-l-2"
-                                    :class="!selectedCategory ? 'border-red-600 bg-red-50 text-red-700 font-medium' : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'"
-                                >
-                                    Semua Kategori
-                                </button>
-                                <button
-                                    v-for="cat in CATEGORIES"
-                                    :key="cat.id"
-                                    @click="selectedCategory = cat.slug"
-                                    class="w-full text-left px-3 py-2 text-sm transition-colors border-l-2 flex items-center gap-2"
-                                    :class="selectedCategory === cat.slug ? 'border-red-600 bg-red-50 text-red-700 font-medium' : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'"
-                                >
-                                    <component :is="cat.iconComponent" class="w-4 h-4" />
-                                    {{ cat.name }}
-                                </button>
-                            </div>
+                        <!-- Paper Size Select -->
+                        <div class="relative min-w-[130px] flex items-stretch">
+                            <LayoutGrid
+                                class="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                            <select v-model="selectedPaperSize"
+                                class="w-full bg-slate-50 border border-slate-200 pr-4 pl-9 py-2 rounded-none text-sm appearance-none focus:bg-white focus:border-red-600 focus:ring-0 outline-none cursor-pointer font-medium"
+                                style="-webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                                <option :value="null">Ukuran</option>
+                                <option v-for="size in paperSizes" :key="size" :value="size">{{ size }}</option>
+                            </select>
                         </div>
 
-                        <!-- Paper Size -->
-                        <div>
-                            <label class="text-sm font-bold text-slate-900 mb-3 block">Ukuran Kertas</label>
-                            <div class="flex flex-wrap gap-2">
-                                <button
-                                    @click="selectedPaperSize = null"
-                                    class="badge transition-colors"
-                                    :class="!selectedPaperSize ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
-                                >
-                                    Semua
-                                </button>
-                                <button
-                                    v-for="size in paperSizes"
-                                    :key="size"
-                                    @click="selectedPaperSize = size"
-                                    class="badge transition-colors"
-                                    :class="selectedPaperSize === size ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
-                                >
-                                    {{ size }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Clear -->
-                        <button
-                            v-if="searchQuery || selectedCategory || selectedPaperSize"
-                            @click="clearFilters"
-                            class="w-full btn-ghost text-sm text-red-600 hover:bg-red-50 justify-center border border-transparent hover:border-red-100"
-                        >
+                        <!-- Clear Button -->
+                        <button v-if="searchQuery || selectedCategory || selectedPaperSize" @click="clearFilters"
+                            class="px-3 bg-red-600 text-white rounded-none hover:bg-red-700 transition-colors flex items-center justify-center border-none outline-none focus:ring-0"
+                            title="Reset Filter">
                             <X class="w-4 h-4" />
-                            Reset Filter
                         </button>
                     </div>
-                </aside>
+                </div>
+            </div>
 
-                <!-- Mobile Filter Toggle -->
-                <div class="lg:hidden">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="relative flex-1">
-                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input v-model="searchQuery" type="text" placeholder="Cari template..." class="input-field pl-9 text-sm" />
-                        </div>
-                        <button @click="showFilters = !showFilters" class="btn-secondary px-3 py-2">
-                            <SlidersHorizontal class="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <!-- Mobile filters panel -->
-                    <div v-show="showFilters" class="bg-white border border-slate-200 p-4 mb-4 space-y-4 shadow-sm">
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                @click="selectedCategory = null"
-                                class="badge transition-colors"
-                                :class="!selectedCategory ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-300'"
-                            >Semua</button>
-                            <button
-                                v-for="cat in CATEGORIES"
-                                :key="cat.id"
-                                @click="selectedCategory = cat.slug"
-                                class="badge transition-colors"
-                                :class="selectedCategory === cat.slug ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-300'"
-                            >{{ cat.name }}</button>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                v-for="size in paperSizes"
-                                :key="size"
-                                @click="selectedPaperSize = selectedPaperSize === size ? null : size"
-                                class="badge transition-colors"
-                                :class="selectedPaperSize === size ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-300'"
-                            >{{ size }}</button>
-                        </div>
-                    </div>
+            <!-- Masonry Grid -->
+            <div v-if="filteredTemplates.length > 0">
+                <div class="flex items-center justify-between mb-6">
+                    <p class="text-sm font-medium text-slate-500">
+                        Menampilkan <span class="text-slate-900 font-bold">{{ filteredTemplates.length }}</span> desain
+                        unik
+                    </p>
                 </div>
 
-                <!-- Template Grid -->
-                <div class="flex-1">
-                    <!-- Results count -->
-                    <div class="flex items-center justify-between mb-5">
-                        <p class="text-sm text-slate-500">
-                            <span class="font-bold text-slate-900">{{ filteredTemplates.length }}</span> template ditemukan
-                        </p>
-                    </div>
-
-                    <!-- Grid -->
-                    <div v-if="filteredTemplates.length > 0" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                        <TemplateCard
-                            v-for="tpl in filteredTemplates"
-                            :key="tpl.id"
-                            :template="tpl"
-                        />
-                    </div>
-
-                    <!-- Empty State -->
-                    <div v-else class="text-center py-20 bg-white border border-slate-200">
-                        <div class="w-16 h-16 bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                            <Search class="w-8 h-8 text-slate-400" />
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-900 mb-2">Tidak ada template ditemukan</h3>
-                        <p class="text-slate-500 text-sm mb-6">Coba kata kunci lain atau reset filter.</p>
-                        <button @click="clearFilters" class="btn-primary text-sm">Reset Filter</button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div v-for="tpl in filteredTemplates" :key="tpl.id">
+                        <TemplateCard :template="tpl" />
                     </div>
                 </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-else class="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                <div class="w-20 h-20 bg-slate-50 flex items-center justify-center mx-auto rounded-2xl mb-6">
+                    <Search class="w-10 h-10 text-slate-300" />
+                </div>
+                <h3 class="text-2xl font-bold text-slate-900 mb-2">Pencarian tidak membuahkan hasil</h3>
+                <p class="text-slate-500 mb-8 max-w-sm mx-auto text-sm leading-relaxed">Maaf, kami tidak menemukan
+                    template yang Anda cari. Coba gunakan kata kunci yang lebih umum.</p>
+                <button @click="clearFilters" class="btn-primary px-8 py-3">Lihat Semua Template</button>
             </div>
         </div>
     </AppLayout>
