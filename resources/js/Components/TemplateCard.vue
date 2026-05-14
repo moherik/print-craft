@@ -2,7 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { CATEGORIES } from '@/Data/templates';
-import { ArrowRight } from 'lucide-vue-next';
+import { ArrowRight, RectangleHorizontal, RectangleVertical } from 'lucide-vue-next';
 
 const props = defineProps({
     template: {
@@ -49,8 +49,10 @@ const category = computed(() => {
             </div>
 
             <!-- Orientation badge -->
-            <div class="absolute top-3 right-3 px-2 py-1 bg-white border border-slate-200 text-slate-500 text-xs font-medium">
-                {{ template.orientation === 'landscape' ? '↔ Landscape' : '↕ Portrait' }}
+            <div class="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-1 bg-white border border-slate-200 text-slate-500 text-xs font-medium">
+                <RectangleHorizontal v-if="template.orientation === 'landscape'" class="w-3.5 h-3.5" />
+                <RectangleVertical v-else class="w-3.5 h-3.5" />
+                {{ template.orientation === 'landscape' ? 'Landscape' : 'Portrait' }}
             </div>
 
             <!-- Paper size badge -->

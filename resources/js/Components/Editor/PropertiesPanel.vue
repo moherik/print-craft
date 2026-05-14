@@ -1,5 +1,5 @@
 <script setup>
-import { X, Trash2, RotateCcw } from 'lucide-vue-next';
+import { X, Trash2, RotateCcw, MousePointerClick } from 'lucide-vue-next';
 import { WIDGET_DEFAULTS } from '@/Data/widgets';
 
 const props = defineProps({ widget: Object, index: Number, template: Object });
@@ -67,7 +67,7 @@ function updateColWidth(colIdx, width) {
 
 <template>
     <div class="w-64 bg-white border-l border-slate-200 overflow-y-auto flex-shrink-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.02)]">
-        <div class="p-4">
+        <div v-if="widget" class="p-4">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
                 <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Properties</h3>
                 <button @click="emit('close')" class="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><X class="w-4 h-4" /></button>
@@ -576,6 +576,12 @@ function updateColWidth(colIdx, width) {
                     </button>
                 </div>
             </div>
+        </div>
+        
+        <!-- Empty State -->
+        <div v-else class="h-full flex flex-col items-center justify-center p-6 text-center opacity-60">
+            <MousePointerClick class="w-8 h-8 text-slate-400 mb-3" />
+            <p class="text-xs text-slate-500 font-medium">Pilih komponen di kanvas untuk melihat properti.</p>
         </div>
     </div>
 </template>

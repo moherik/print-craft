@@ -374,14 +374,15 @@ function handleFocus() {
             <div v-for="i in (widget.items || 10)" :key="i" class="flex items-center gap-1"
                 :class="compact ? 'text-[7px]' : 'text-xs'">
                 <div class="border border-gray-400 flex-shrink-0" :class="compact ? 'w-2 h-2' : 'w-3.5 h-3.5'"></div>
-                <div class="flex-1 border-b border-gray-200" :class="compact ? 'h-2' : 'h-4'"></div>
+                <div class="flex-1" :style="{ borderBottom: '1px solid #e5e7eb' }" :class="compact ? 'h-2' : 'h-4'">
+                </div>
             </div>
         </div>
 
         <!-- LINES -->
         <div v-else-if="widget.type === 'lines'" class="w-full">
-            <div v-for="i in (widget.lineCount || 20)" :key="i" class="border-b border-gray-300"
-                :style="{ height: (compact ? 4 : (widget.lineSpacing || 8)) + 'mm' }">
+            <div v-for="i in (widget.lineCount || 20)" :key="i" class="w-full"
+                :style="{ borderBottom: '1px solid #cbd5e1', height: (compact ? 4 : (widget.lineSpacing || 8)) + 'mm' }">
             </div>
         </div>
 
@@ -429,8 +430,7 @@ function handleFocus() {
 
                     <!-- Holiday Name -->
                     <div v-if="!compact && getHoliday(day)"
-                        class="absolute bottom-1 left-1.5 right-1 leading-tight break-words overflow-hidden max-h-[14px]"
-                        :style="{
+                        class="absolute bottom-2 left-1.5 right-1 leading-none break-words" :style="{
                             fontSize: (widget.holidayStyle?.detailSize || 7) + 'px',
                             color: widget.holidayStyle?.detailColor || '#e11d48',
                             fontWeight: widget.holidayStyle?.detailWeight || 'bold'
@@ -440,9 +440,8 @@ function handleFocus() {
 
                     <!-- Event Lines -->
                     <div v-if="!compact && day && widget.eventStyle?.show" class="mt-4 space-y-1 pr-1">
-                        <div v-for="l in 3" :key="l" class="w-full border-b"
-                            :style="{ borderColor: widget.eventStyle?.color || '#e2e8f0', height: (widget.eventStyle?.fontSize || 8) + 'px' }">
-                        </div>
+                        <hr v-for="l in 3" :key="l"
+                            :style="{ border: 'none', height: '1px', backgroundColor: widget.eventStyle?.color || '#e2e8f0', marginBottom: (widget.eventStyle?.fontSize || 20) + 'px' }" />
                     </div>
                 </div>
             </div>
@@ -454,7 +453,7 @@ function handleFocus() {
                     color: widget.holidayListStyle?.color || '#1e293b',
                     fontWeight: widget.holidayListStyle?.fontWeight || 'normal'
                 }">
-                <div v-for="h in monthlyHolidays" :key="h.date" class="flex items-center gap-1">
+                <div v-for="h in monthlyHolidays" :key="h.date" class="flex items-center gap-1 whitespace-nowrap">
                     <span class="font-bold" :style="{ color: widget.holidayStyle?.color || '#dc2626' }">
                         {{ new Date(h.date).getDate() }}
                     </span>

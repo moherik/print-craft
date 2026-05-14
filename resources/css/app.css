@@ -115,6 +115,10 @@
     }
 
     /* 4. Remove zoom transform for print */
+    .print-reset-zoom {
+        zoom: 1 !important;
+    }
+    
     .zoom-wrapper {
         transform: none !important;
         display: block !important;
@@ -126,12 +130,20 @@
         background: transparent !important;
     }
 
+    .page-container {
+        break-after: page;
+        page-break-after: always;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
     /* 5. Canvas Positioning — use static flow so pages stack vertically */
     .print-canvas {
         display: block !important;
         position: relative !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        margin: 0 auto !important;
         border: none !important;
         box-shadow: none !important;
         transform: none !important;
@@ -183,7 +195,7 @@
 }
 
 /* Neutralize global tailwind artifacts */
-.exporting *:not([class~="border"]):not([class*="border-b"]):not([class*="border-t"]):not(tr):not(tbody):not(thead):not(hr) {
+.exporting *:not([class~="border"]):not([class*="border-b"]):not([class*="border-t"]):not(table):not(tr):not(tbody):not(thead):not(hr) {
     border-color: transparent !important;
 }
 
@@ -217,3 +229,17 @@
     color: transparent !important;
 }
 
+/* Fix dom-to-image thick border bug on tables with border-collapse */
+.exporting table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border-top: 1px solid #d1d5db !important; /* tailwind gray-300 */
+    border-left: 1px solid #d1d5db !important;
+}
+
+.exporting table th,
+.exporting table td {
+    border: none !important;
+    border-right: 1px solid #d1d5db !important;
+    border-bottom: 1px solid #d1d5db !important;
+}
