@@ -1,12 +1,14 @@
 <script setup>
 import { PAPER_SIZES } from '@/Composables/usePaperSize';
 import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { CATEGORIES } from '@/Data/templates';
 import {
     ArrowLeft, Printer, Download, Loader2,
-    Grid3x3, Ruler, FileText, AlignVerticalSpaceAround,
+    FileText,
     RectangleVertical,
     RectangleHorizontal,
-    Scan, Layers
+    ChevronDown
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -22,22 +24,55 @@ const emit = defineEmits([
     'update:marginMm', 'update:lineSpacing', 'print', 'export-pdf', 'update:guideMode', 'update:printQuantity'
 ]);
 
+const showCategoryDropdown = ref(false);
 const paperSizes = Object.keys(PAPER_SIZES);
 </script>
 
 <template>
     <div class="no-print bg-white border-b border-slate-200 px-4 py-2 flex-shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-4 flex-wrap">
-            <!-- Back + Title -->
-            <div class="flex items-center gap-3 mr-auto border-r border-slate-200 pr-4 py-1">
-                <Link :href="route('templates.index')"
-                    class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors">
-                    <ArrowLeft class="w-5 h-5" />
+            <!-- Logo + Brand + Title -->
+            <div class="flex items-center gap-6 mr-auto py-1">
+                <Link :href="route('home')" class="flex items-center gap-2 group">
+                    <div class="w-7 h-7 bg-red-600 flex items-center justify-center">
+                        <Printer class="w-4 h-4 text-white" />
+                    </div>
+                    <span class="hidden lg:block text-base font-bold text-slate-900 tracking-tight">PrintCraft</span>
                 </Link>
-                <div class="hidden sm:block">
-                    <h2 class="text-sm font-bold text-slate-900 leading-tight">{{ template?.name || 'Editor' }}</h2>
-                    <p v-if="category" class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{{
-                        category.name }}</p>
+
+                <!-- Category Dropdown -->
+                <div class="relative hidden xl:block" @mouseenter="showCategoryDropdown = true"
+                    @mouseleave="showCategoryDropdown = false">
+                    <button class="btn-ghost text-xs flex items-center gap-1 px-2 py-1.5 text-slate-500 font-bold">
+                        Kategori
+                        <ChevronDown class="w-3.5 h-3.5" />
+                    </button>
+                    <div v-show="showCategoryDropdown"
+                        class="absolute top-full left-0 w-60 bg-white border border-slate-200 shadow-xl py-1 mt-0">
+                        <Link v-for="cat in CATEGORIES" :key="cat.id" :href="route('categories.show', cat.slug)"
+                            class="flex items-center gap-3 p-2.5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                        <div class="w-7 h-7 flex items-center justify-center bg-slate-50">
+                            <component :is="cat.iconComponent" class="w-3.5 h-3.5 text-slate-500" />
+                        </div>
+                        <div class="text-xs font-bold text-slate-800">{{ cat.name }}</div>
+                        </Link>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <Link :href="route('templates.index')"
+                        class="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Semua Template">
+                    <ArrowLeft class="w-5 h-5" />
+                    </Link>
+
+                    <div class="hidden sm:block">
+                        <h2 class="text-sm font-bold text-slate-900 leading-tight">{{ template?.name || 'Editor' }}</h2>
+                        <Link v-if="category" :href="route('categories.show', category.slug)"
+                            class="text-[10px] text-slate-400 font-black uppercase tracking-wider hover:text-red-600 transition-colors block">
+                        {{ category.name }}
+                        </Link>
+                    </div>
                 </div>
             </div>
 

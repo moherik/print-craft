@@ -41,7 +41,7 @@ function adjustZoom(delta) {
         <div class="hidden lg:block w-px h-5 bg-slate-200 mx-1"></div>
 
         <!-- Sync Toggle -->
-        <button @click="emit('update:isSynced', !isSynced)"
+        <button v-if="!props.template?.disableSync" @click="emit('update:isSynced', !isSynced)"
             class="hidden lg:flex px-2 py-1 text-xs gap-1.5 font-medium border border-transparent hover:bg-slate-50 rounded transition-colors"
             :class="isSynced ? 'text-red-600 bg-red-50 border-red-200' : 'text-slate-500'">
             <RotateCcw class="w-3.5 h-3.5" :class="isSynced ? 'animate-spin-slow' : ''" />

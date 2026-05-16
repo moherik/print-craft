@@ -18,7 +18,7 @@ const props = defineProps({
     isSynced: { type: Boolean, default: true }
 });
 
-const emit = defineEmits(['select-widget', 'update-widget']);
+const emit = defineEmits(['select-widget', 'update-widget', 'open-photo-editor']);
 
 const isSelected = computed(() => {
     if (!props.selectedPath || !props.path) return false;
@@ -159,14 +159,17 @@ const textStyles = computed(() => {
 });
 
 // ─── Image Widget ───
-const imageSrc = ref(props.widget.src || null);
 function handleImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-        imageSrc.value = ev.target.result;
-        emit('update-widget', props.path, { src: ev.target.result });
+        emit('open-photo-editor', {
+            path: props.path,
+            src: ev.target.result,
+            aspectRatio: props.widget.aspectRatio || null
+        });
+        e.target.value = ''; // Reset input
     };
     reader.readAsDataURL(file);
 }
@@ -244,7 +247,8 @@ function handleFocus() {
         :tabindex="(isInteractive && !isSelected) ? 0 : -1"
         class="widget-renderer relative group/widget cursor-pointer outline-none focus:ring-2 focus:ring-red-600/50 focus:ring-offset-1"
         :class="[
-            { 'ring-2 ring-red-600 ring-offset-1 print:!ring-0 print:!ring-offset-0': isSelected }
+            { 'ring-2 ring-red-600 ring-offset-1 print:!ring-0 print:!ring-offset-0': isSelected },
+            { 'flex-1 w-full h-full flex flex-col': widget.type === 'image' }
         ]">
 
         <!-- TEXT -->
@@ -267,16 +271,36 @@ function handleFocus() {
 
 
         <!-- IMAGE -->
-        <div v-else-if="widget.type === 'image'" class="w-full">
-            <div v-if="imageSrc" class="w-full">
-                <img :src="imageSrc" class="w-full object-contain max-h-full"
-                    :style="{ objectFit: widget.fit || 'contain' }" />
+        <div v-else-if="widget.type === 'image'" class="flex-1 w-full h-full relative group/img overflow-hidden">
+            <div v-if="widget.src" class="w-full h-full relative">
+                <img :src="widget.src" class="absolute inset-0 w-full h-full aspect-1/4" :style="{
+                    objectFit: widget.fit || 'cover',
+                    filter: `brightness(${widget.brightness !== undefined ? widget.brightness : 100}%) contrast(${widget.contrast !== undefined ? widget.contrast : 100}%)`,
+                    transform: `scale(${widget.zoom || 1}) rotate(${widget.rotation || 0}deg)`
+                }" />
+
+                <!-- Hover Edit Overlay -->
+                <div v-if="!compact || isSelected"
+                    class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center no-print backdrop-blur-sm">
+                    <button
+                        @click.stop="emit('open-photo-editor', { path, src: widget.originalSrc || widget.src, aspectRatio: widget.aspectRatio })"
+                        class="px-3 py-1.5 bg-white text-slate-800 rounded text-xs font-bold shadow hover:bg-slate-50 flex items-center gap-1.5 transition-colors">
+                        <ImageIcon class="w-3.5 h-3.5" />
+                        Edit Foto
+                    </button>
+                </div>
             </div>
             <label v-else
-                class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded cursor-pointer hover:border-blue-400 transition-colors bg-gray-50"
+                class="absolute inset-0 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-300 bg-slate-50 cursor-pointer hover:border-red-400 hover:bg-red-50 transition-colors group/upload no-print"
                 :class="compact ? 'p-1' : 'p-4'">
-                <span class="text-gray-400" :class="compact ? 'text-[8px]' : 'text-xs'">📷 {{ widget.label || 'Upload'
-                    }}</span>
+                <div
+                    class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mb-2 group-hover/upload:scale-110 transition-transform">
+                    <ImageIcon class="w-4 h-4 text-slate-400 group-hover/upload:text-red-500" />
+                </div>
+                <span class="text-slate-500 font-medium text-center leading-tight"
+                    :class="compact ? 'text-[8px]' : 'text-xs'">
+                    {{ widget.label || 'Pilih Foto' }}
+                </span>
                 <input type="file" accept="image/*" @change="handleImageUpload" class="hidden" />
             </label>
         </div>

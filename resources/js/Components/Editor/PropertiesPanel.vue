@@ -11,13 +11,14 @@ const props = defineProps({
     gridRows: Number,
     printQuantity: Number,
     marginMm: Number,
+    gridGapMm: Number,
     guideMode: String,
     lineSpacing: Number
 });
 const emit = defineEmits([
     'update', 'close', 'remove',
     'update:gridCols', 'update:gridRows', 'update:printQuantity',
-    'update:marginMm', 'update:guideMode', 'update:lineSpacing'
+    'update:marginMm', 'update:gridGapMm', 'update:guideMode', 'update:lineSpacing', 'open-photo-editor'
 ]);
 
 function update(key, value) {
@@ -77,6 +78,17 @@ function updateColWidth(colIdx, width) {
     const widths = props.widget.colWidths ? [...props.widget.colWidths] : Array(props.widget.colCount || 2).fill(1);
     widths[colIdx] = width;
     emit('update', { colWidths: widths });
+}
+
+function handleUploadPhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        emit('open-photo-editor', { src: ev.target.result, aspectRatio: props.widget.aspectRatio });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
 }
 
 // ─── Global Settings Capabilities ───
@@ -190,6 +202,59 @@ function reset(key) {
                             <input type="color" :value="widget.color" @input="update('color', $event.target.value)"
                                 class="w-10 h-8 p-0 border-0 bg-transparent cursor-pointer" />
                             <span class="text-xs text-slate-600 uppercase">{{ widget.color || '#000000' }}</span>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Image -->
+                <template v-if="widget.type === 'image'">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2 block">Pengaturan Foto</label>
+                            
+                            <div class="flex flex-col gap-2">
+                                <button v-if="widget.src" @click="emit('open-photo-editor', { src: widget.originalSrc || widget.src, aspectRatio: widget.aspectRatio })"
+                                    class="w-full py-2 bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs rounded border border-red-200 transition-colors flex justify-center items-center gap-2">
+                                    Edit Lanjutan (Crop, Filter, dll)
+                                </button>
+                                
+                                <label class="w-full py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 font-bold text-xs rounded border border-slate-200 transition-colors flex justify-center items-center gap-2 cursor-pointer">
+                                    {{ widget.src ? 'Ganti Foto' : 'Pilih Foto' }}
+                                    <input type="file" accept="image/*" @change="handleUploadPhoto" class="hidden" />
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Fine-tuning sliders -->
+                        <div v-if="widget.src" class="space-y-3 pt-3 border-t border-slate-200">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Kecerahan</label>
+                                    <span class="text-[10px] text-slate-400">{{ widget.brightness !== undefined ? widget.brightness : 100 }}%</span>
+                                </div>
+                                <input type="range" :value="widget.brightness !== undefined ? widget.brightness : 100" @input="update('brightness', +$event.target.value)" min="0" max="200" class="w-full accent-red-600">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Kontras</label>
+                                    <span class="text-[10px] text-slate-400">{{ widget.contrast !== undefined ? widget.contrast : 100 }}%</span>
+                                </div>
+                                <input type="range" :value="widget.contrast !== undefined ? widget.contrast : 100" @input="update('contrast', +$event.target.value)" min="0" max="200" class="w-full accent-red-600">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Rotasi</label>
+                                    <span class="text-[10px] text-slate-400">{{ widget.rotation || 0 }}°</span>
+                                </div>
+                                <input type="range" :value="widget.rotation || 0" @input="update('rotation', +$event.target.value)" min="-180" max="180" class="w-full accent-red-600">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Zoom</label>
+                                    <span class="text-[10px] text-slate-400">{{ widget.zoom || 1 }}x</span>
+                                </div>
+                                <input type="range" :value="widget.zoom || 1" @input="update('zoom', +$event.target.value)" min="0.5" max="3" step="0.1" class="w-full accent-red-600">
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -806,7 +871,7 @@ function reset(key) {
                             <div class="flex items-center justify-between mb-1.5">
                                 <div class="flex items-center gap-2 text-slate-500 group/label">
                                     <Ruler class="w-3.5 h-3.5" />
-                                    <span class="text-[11px] font-semibold tracking-tight">Margin</span>
+                                    <span class="text-[11px] font-semibold tracking-tight">Margin Halaman</span>
                                     <button @click="reset('marginMm')"
                                         class="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-red-600 transition-colors opacity-0 group-hover/label:opacity-100"
                                         title="Reset ke default template">
@@ -818,6 +883,21 @@ function reset(key) {
                             </div>
                             <input type="range" :value="marginMm" @input="emit('update:marginMm', +$event.target.value)"
                                 min="0" max="30"
+                                class="w-full h-1 bg-slate-200 accent-red-600 appearance-none rounded-lg cursor-pointer" />
+                        </div>
+
+                        <!-- Grid Gap -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="flex items-center gap-2 text-slate-500 group/label">
+                                    <Grid3x3 class="w-3.5 h-3.5" />
+                                    <span class="text-[11px] font-semibold tracking-tight">Jarak Antar Grid (Gap)</span>
+                                </div>
+                                <span class="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{{
+                                    gridGapMm }}mm</span>
+                            </div>
+                            <input type="range" :value="gridGapMm" @input="emit('update:gridGapMm', +$event.target.value)"
+                                min="0" max="20" step="0.5"
                                 class="w-full h-1 bg-slate-200 accent-red-600 appearance-none rounded-lg cursor-pointer" />
                         </div>
 

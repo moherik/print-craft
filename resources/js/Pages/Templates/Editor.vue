@@ -11,6 +11,7 @@ import EditorCanvas from '@/Components/Editor/EditorCanvas.vue';
 import WidgetSidebar from '@/Components/Editor/WidgetSidebar.vue';
 import PropertiesPanel from '@/Components/Editor/PropertiesPanel.vue';
 import EditorToast from '@/Components/Editor/EditorToast.vue';
+import PhotoEditorModal from '@/Components/Editor/PhotoEditorModal.vue';
 import { WIDGET_DEFAULTS } from '@/Data/widgets';
 
 const props = defineProps({ templateSlug: String });
@@ -24,6 +25,7 @@ const orientation = ref('portrait');
 const gridCols = ref(1);
 const gridRows = ref(1);
 const marginMm = ref(5);
+const gridGapMm = ref(0);
 const guideMode = ref('crop'); // 'none', 'crop', 'full'
 const zoom = ref(0.7);
 const isSynced = ref(true);
@@ -35,6 +37,13 @@ const scrollContainerRef = ref(null);
 const isExporting = ref(false);
 const toastRef = ref(null);
 const isDirty = ref(false);
+
+// Photo Editor State
+const isPhotoEditorOpen = ref(false);
+const editingPhotoSrc = ref('');
+const editingPhotoAspect = ref(null);
+const editingPhotoPath = ref(null);
+const editingCellIndex = ref(0);
 
 // Widgets per cell (array of arrays)
 const cells = ref([[]]);
@@ -83,6 +92,37 @@ watch(cells, () => saveHistory(), { deep: true, immediate: true });
 
 const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value < history.value.length - 1);
+
+// Watch orientation to swap grid layout automatically
+watch(orientation, (newVal, oldVal) => {
+    if (newVal !== oldVal) {
+        if (template.value?.itemWidthMm && template.value?.itemHeightMm) {
+            // DYNAMIC CALCULATION based on standard physical dimensions
+            const dims = getPaperDimensionsPx(paperSize.value, newVal);
+            const margin = marginMm.value;
+            const gap = gridGapMm.value;
+            const innerW = dims.widthMm - (2 * margin);
+            const innerH = dims.heightMm - (2 * margin);
+
+            // Calculate how many fit with gaps: (InnerW + Gap) / (ItemW + Gap)
+            gridCols.value = Math.floor((innerW + gap) / (template.value.itemWidthMm + gap));
+            gridRows.value = Math.floor((innerH + gap) / (template.value.itemHeightMm + gap));
+        }
+    }
+});
+
+// Also watch paperSize and gridGapMm for the same dynamic adjustment
+watch([paperSize, gridGapMm], ([newSize, newGap]) => {
+    if (template.value?.itemWidthMm && template.value?.itemHeightMm) {
+        const dims = getPaperDimensionsPx(newSize, orientation.value);
+        const margin = marginMm.value;
+        const innerW = dims.widthMm - (2 * margin);
+        const innerH = dims.heightMm - (2 * margin);
+        
+        gridCols.value = Math.floor((innerW + newGap) / (template.value.itemWidthMm + newGap));
+        gridRows.value = Math.floor((innerH + newGap) / (template.value.itemHeightMm + newGap));
+    }
+});
 
 // ─── LocalStorage Auto-save ───
 const STORAGE_KEY = computed(() => `printcraft-editor-${props.templateSlug}`);
@@ -149,6 +189,10 @@ onMounted(() => {
         orientation.value = template.value.orientation;
         gridCols.value = template.value.gridCols;
         gridRows.value = template.value.gridRows;
+
+        if (template.value.disableSync) {
+            isSynced.value = false;
+        }
 
         const initialWidgets = JSON.parse(JSON.stringify(template.value.widgets || []));
 
@@ -333,7 +377,7 @@ function updateWidget(path, updates, cellIndex = null) {
 
     function applyUpdate(cell, index) {
         if (!cell || !path || !path.length) return;
-        
+
         // If syncing, we only want to apply updates that are NOT protected
         // or if we are updating the target cell itself
         const filteredUpdates = { ...updates };
@@ -361,6 +405,51 @@ function updateWidget(path, updates, cellIndex = null) {
 function handleSelectWidget(path, cIndex) {
     selectedWidgetPath.value = path;
     selectedCellIndex.value = cIndex;
+}
+
+// ─── Photo Editor Logic ───
+function handleOpenPhotoEditor(payload) {
+    editingPhotoPath.value = payload.path;
+    editingPhotoSrc.value = payload.src;
+
+    // Look up aspect ratio from template if not provided by widget
+    let aspect = payload.aspectRatio;
+    if (!aspect && template.value?.widgets) {
+        const tWidget = template.value.widgets.find(w => w.type === 'image');
+        if (tWidget && tWidget.aspectRatio) {
+            aspect = tWidget.aspectRatio;
+        }
+    }
+    editingPhotoAspect.value = aspect || null;
+
+    // Keep track of which cell triggered it in case we are not synced
+    editingCellIndex.value = selectedCellIndex.value;
+    isPhotoEditorOpen.value = true;
+}
+
+function handleSavePhoto(payload) {
+    const updates = {
+        src: payload.src,
+        originalSrc: payload.originalSrc,
+        brightness: 100,
+        contrast: 100,
+        rotation: 0,
+        zoom: 1
+    };
+
+    if (payload.applyToAll) {
+        // Apply to ALL cells in the grid
+        cells.value.forEach((_, cellIdx) => {
+            updateWidget(editingPhotoPath.value, updates, cellIdx);
+        });
+        toastRef.value?.show('Foto diterapkan ke semua grid', 'save');
+    } else {
+        // Apply only to the specific cell
+        updateWidget(editingPhotoPath.value, updates, editingCellIndex.value);
+        toastRef.value?.show('Foto berhasil diterapkan', 'save');
+    }
+
+    isPhotoEditorOpen.value = false;
 }
 
 async function handleExportPdf() {
@@ -510,12 +599,13 @@ function handleFitPage() {
                         @click="selectedWidgetPath = null">
                         <div class="absolute inset-0 pattern-dots opacity-50 pointer-events-none no-print"></div>
                         <EditorCanvas ref="canvasRef" :paperSize="paperSize" :orientation="orientation"
-                            :gridCols="gridCols" :gridRows="gridRows" :marginMm="marginMm" :guideMode="guideMode"
-                            :zoom="zoom" :isSynced="isSynced" :lineSpacing="lineSpacing" :cells="cells"
-                            :printQuantity="printQuantity" :selectedWidgetPath="selectedWidgetPath"
+                            :gridCols="gridCols" :gridRows="gridRows" :marginMm="marginMm" :gridGapMm="gridGapMm"
+                            :guideMode="guideMode" :zoom="zoom" :isSynced="isSynced" :lineSpacing="lineSpacing"
+                            :cells="cells" :printQuantity="printQuantity" :selectedWidgetPath="selectedWidgetPath"
                             :selectedCellIndex="selectedCellIndex" @select-widget="handleSelectWidget"
                             @update-widget="updateWidget" @remove-widget="removeWidget"
-                            @reorder-widgets="handleReorderWidgets" class="z-10 relative" />
+                            @reorder-widgets="handleReorderWidgets" @open-photo-editor="handleOpenPhotoEditor"
+                            class="z-10 relative" />
                     </div>
 
                     <!-- Floating Bottom Toolbar -->
@@ -529,14 +619,22 @@ function handleFitPage() {
                 <!-- Properties Panel -->
                 <PropertiesPanel class="no-print hidden lg:block" :widget="selectedWidget" :template="template"
                     :gridCols="gridCols" :gridRows="gridRows" :printQuantity="cells.length" :marginMm="marginMm"
-                    :guideMode="guideMode" :lineSpacing="lineSpacing" @update:gridCols="(val) => gridCols = val"
+                    :gridGapMm="gridGapMm" :guideMode="guideMode" :lineSpacing="lineSpacing" 
+                    @update:gridCols="(val) => gridCols = val"
                     @update:gridRows="(val) => gridRows = val" @update:printQuantity="updateQuantity"
-                    @update:marginMm="(val) => marginMm = val" @update:guideMode="(val) => guideMode = val"
+                    @update:marginMm="(val) => marginMm = val" 
+                    @update:gridGapMm="(val) => gridGapMm = val"
+                    @update:guideMode="(val) => guideMode = val"
                     @update:lineSpacing="(val) => lineSpacing = val"
                     @update="(updates) => updateWidget(selectedWidgetPath, updates)" @close="selectedWidgetPath = null"
-                    @remove="removeWidget(selectedWidgetPath)" />
+                    @remove="removeWidget(selectedWidgetPath)"
+                    @open-photo-editor="(payload) => handleOpenPhotoEditor({ ...payload, path: selectedWidgetPath })" />
             </div>
         </div>
+
+        <!-- Photo Editor Modal -->
+        <PhotoEditorModal :isOpen="isPhotoEditorOpen" :imageSrc="editingPhotoSrc" :aspectRatio="editingPhotoAspect"
+            @close="isPhotoEditorOpen = false" @save="handleSavePhoto" />
 
         <!-- Toast Notifications -->
         <EditorToast ref="toastRef" />

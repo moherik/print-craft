@@ -50,12 +50,36 @@ export async function exportToPdf(element, options = {}) {
             // Add exporting class to clean up Tailwind artifacts
             page.classList.add("exporting");
 
+            // --- Fix Tailwind border bug for dom-to-image ---
+            // Tailwind sets border-style: solid and border-width: 0 globally.
+            // dom-to-image-more sometimes renders a faint border when scaling if border-style is solid.
+            const allElements = page.querySelectorAll("*");
+            const modifiedElements = [];
+
+            allElements.forEach((el) => {
+                const style = window.getComputedStyle(el);
+                if (
+                    style.borderTopWidth === "0px" &&
+                    style.borderRightWidth === "0px" &&
+                    style.borderBottomWidth === "0px" &&
+                    style.borderLeftWidth === "0px"
+                ) {
+                    if (style.borderStyle !== "none") {
+                        modifiedElements.push({
+                            el,
+                            oldStyle: el.style.getPropertyValue("border-style"),
+                        });
+                        el.style.setProperty(
+                            "border-style",
+                            "none",
+                            "important",
+                        );
+                    }
+                }
+            });
+
             // Wait a tick for styles to apply and layout to recalculate
             await new Promise((r) => setTimeout(r, 50));
-
-            // Use offsetWidth/Height to get unscaled dimensions.
-            // const pixelW = page.outerWidth * quality;
-            // const pixelH = page.outerHeight * quality;
 
             const dataUrl = await domtoimage.toPng(page, {
                 bgColor: "#ffffff",
@@ -66,8 +90,8 @@ export async function exportToPdf(element, options = {}) {
                 style: {
                     transform: `scale(${quality})`,
                     transformOrigin: "top left",
-                    width: pxWidth,
-                    height: pxHeight,
+                    width: pxWidth + "px",
+                    height: pxHeight + "px",
                 },
                 filter: (node) => {
                     if (!node.classList) return true;
@@ -78,13 +102,23 @@ export async function exportToPdf(element, options = {}) {
             // Remove exporting class to restore editor view
             page.classList.remove("exporting");
 
+            // Restore original border styles
+            modifiedElements.forEach(({ el, oldStyle }) => {
+                if (oldStyle) {
+                    el.style.setProperty("border-style", oldStyle);
+                } else {
+                    el.style.removeProperty("border-style");
+                }
+                if (!el.getAttribute("style")) el.removeAttribute("style");
+            });
+
             if (i > 0) pdf.addPage([mmWidth, mmHeight], orientation);
             pdf.setPage(i + 1);
             pdf.addImage(
                 dataUrl,
                 "PNG",
-                -5,
-                -5,
+                0,
+                0,
                 mmWidth,
                 mmHeight,
                 undefined,

@@ -15,13 +15,14 @@ const props = defineProps({
     showCropMarks: { type: Boolean, default: true },
     zoom: { type: Number, default: 0.7 },
     isSynced: { type: Boolean, default: true },
-    lineSpacing: { type: Number, default: 1.5 },
+    lineSpacing: { type: Number, default: 1.15 },
+    gridGapMm: { type: Number, default: 0 },
     cells: { type: Array, default: () => [[]] },
     selectedWidgetPath: Array,
     selectedCellIndex: { type: Number, default: 0 },
 });
 
-const emit = defineEmits(['select-widget', 'update-widget', 'remove-widget', 'reorder-widgets']);
+const emit = defineEmits(['select-widget', 'update-widget', 'remove-widget', 'reorder-widgets', 'open-photo-editor']);
 const canvasContainer = ref(null);
 const isDragging = ref(false);
 
@@ -59,7 +60,7 @@ function absCellIdx(pIdx, cIdx = 0) {
 
 // ─── Guide Lines ───
 const guideLines = computed(() => {
-    const M = m.value, W = w.value, H = h.value, C = cl;
+    const M = m.value, W = w.value, H = h.value, C = cl, G = props.gridGapMm;
     const lines = [];
 
     // Base Margin Guides
@@ -83,33 +84,48 @@ const guideLines = computed(() => {
         );
     }
 
-    // Grid Guides (Show only if guideMode is NOT none)
+    // Grid Guides
     if (props.guideMode !== 'none') {
         const innerW = W - (2 * M);
         const innerH = H - (2 * M);
-        const cellW = innerW / props.gridCols;
-        const cellH = innerH / props.gridRows;
+
+        // Exact physical sizes of items
+        const itemW = (innerW - (props.gridCols - 1) * G) / props.gridCols;
+        const itemH = (innerH - (props.gridRows - 1) * G) / props.gridRows;
 
         // Vertical Grid Marks
-        for (let i = 1; i < props.gridCols; i++) {
-            const x = M + (i * cellW);
-            if (props.guideMode === 'full') {
-                lines.push({ x1: x, y1: 0, x2: x, y2: H });
-            } else {
-                // Top & Bottom tick marks
-                lines.push({ x1: x, y1: 0, x2: x, y2: C });
-                lines.push({ x1: x, y1: H, x2: x, y2: H - C });
+        for (let i = 1; i <= props.gridCols; i++) {
+            // Lines at start and end of each item
+            const x1 = M + (i - 1) * (itemW + G);
+            const x2 = x1 + itemW;
+
+            // Only draw interior lines to avoid duplicating margin lines
+            if (i > 1) {
+                const drawX = x1;
+                if (props.guideMode === 'full') lines.push({ x1: drawX, y1: 0, x2: drawX, y2: H });
+                else lines.push({ x1: drawX, y1: 0, x2: drawX, y2: C }, { x1: drawX, y1: H, x2: drawX, y2: H - C });
+            }
+            if (i < props.gridCols) {
+                const drawX = x2;
+                if (props.guideMode === 'full') lines.push({ x1: drawX, y1: 0, x2: drawX, y2: H });
+                else lines.push({ x1: drawX, y1: 0, x2: drawX, y2: C }, { x1: drawX, y1: H, x2: drawX, y2: H - C });
             }
         }
+
         // Horizontal Grid Marks
-        for (let i = 1; i < props.gridRows; i++) {
-            const y = M + (i * cellH);
-            if (props.guideMode === 'full') {
-                lines.push({ x1: 0, y1: y, x2: W, y2: y });
-            } else {
-                // Left & Right tick marks
-                lines.push({ x1: 0, y1: y, x2: C, y2: y });
-                lines.push({ x1: W, y1: y, x2: W - C, y2: y });
+        for (let i = 1; i <= props.gridRows; i++) {
+            const y1 = M + (i - 1) * (itemH + G);
+            const y2 = y1 + itemH;
+
+            if (i > 1) {
+                const drawY = y1;
+                if (props.guideMode === 'full') lines.push({ x1: 0, y1: drawY, x2: W, y2: drawY });
+                else lines.push({ x1: 0, y1: drawY, x2: C, y2: drawY }, { x1: W, y1: drawY, x2: W - C, y2: drawY });
+            }
+            if (i < props.gridRows) {
+                const drawY = y2;
+                if (props.guideMode === 'full') lines.push({ x1: 0, y1: drawY, x2: W, y2: drawY });
+                else lines.push({ x1: 0, y1: drawY, x2: C, y2: drawY }, { x1: W, y1: drawY, x2: W - C, y2: drawY });
             }
         }
     }
@@ -139,7 +155,7 @@ function onDragEnd() { isDragging.value = false; }
                     PRINT-CANVAS: This is the element captured for PDF.
                     Kept intentionally simple — just a box with padding, no absolute positioning.
                 -->
-                <div class="print-canvas bg-white box-border relative" :style="{
+                <div class="print-canvas bg-white box-border relative border-none border-0" :style="{
                     width: w + 'mm',
                     height: h + 'mm',
                     padding: m + 'mm',
@@ -154,15 +170,18 @@ function onDragEnd() { isDragging.value = false; }
                     </svg>
 
                     <!-- Cell grid (1×1 when not grid) -->
-                    <div class="w-full h-full flex flex-wrap relative z-10" :style="{ lineHeight: lineSpacing }">
+                    <div class="w-full h-full flex flex-wrap relative z-10" :style="{
+                        lineHeight: lineSpacing,
+                        gap: gridGapMm + 'mm'
+                    }">
 
                         <div v-for="(cellWidgets, cIdx) in getCellsForPage(pIdx)" :key="cIdx"
                             @click="emit('select-widget', null, absCellIdx(pIdx, cIdx))"
                             class="flex flex-col relative box-border" :class="[
                                 { 'bg-red-50/50 ring-1 ring-inset ring-red-100 print:!bg-transparent print:!ring-0': !isSynced && selectedCellIndex === absCellIdx(pIdx, cIdx) }
                             ]" :style="{
-                                width: (100 / gridCols) + '%',
-                                height: (100 / gridRows) + '%',
+                                width: `calc((100% - ${(gridCols - 1) * gridGapMm}mm) / ${gridCols})`,
+                                height: `calc((100% - ${(gridRows - 1) * gridGapMm}mm) / ${gridRows})`,
                                 gap: spacingMm,
                             }">
 
@@ -176,13 +195,14 @@ function onDragEnd() { isDragging.value = false; }
                             <draggable :list="cellWidgets" group="widgets" item-key="index" handle=".drag-handle"
                                 @change="(evt) => handleDraggableChange(evt, absCellIdx(pIdx, cIdx))"
                                 @start="onDragStart" @end="onDragEnd" ghost-class="sortable-ghost"
-                                drag-class="sortable-drag" class="flex-1 flex flex-col drop-zone"
-                                :class="{ 'w-full h-full': !isGrid, 'drop-zone-active': isDragging }"
-                                :style="{ gap: spacingMm }">
+                                drag-class="sortable-drag" class="flex-1 flex flex-col drop-zone w-full h-full"
+                                :class="{ 'drop-zone-active': isDragging }" :style="{ gap: spacingMm }">
 
                                 <template #item="{ element: widget, index: wIdx }">
-                                    <div class="relative group/root"
-                                        :class="{ 'z-10': selectedWidgetPath?.[0] === wIdx && selectedWidgetPath?.length === 1 }">
+                                    <div class="relative group/root" :class="[
+                                        { 'z-10': selectedWidgetPath?.[0] === wIdx && selectedWidgetPath?.length === 1 },
+                                        { 'flex-1 w-full h-full flex flex-col': widget.type === 'image' }
+                                    ]">
 
                                         <!-- Drag handle (editor only) -->
                                         <div
@@ -198,7 +218,8 @@ function onDragEnd() { isDragging.value = false; }
                                             :path="[wIdx]" :selectedPath="selectedWidgetPath" :compact="isGrid"
                                             :cellIndex="absCellIdx(pIdx, cIdx)" :selectedCellIndex="selectedCellIndex"
                                             @select-widget="(path) => emit('select-widget', path, absCellIdx(pIdx, cIdx))"
-                                            @update-widget="(path, updates) => emit('update-widget', path, updates, absCellIdx(pIdx, cIdx))" />
+                                            @update-widget="(path, updates) => emit('update-widget', path, updates, absCellIdx(pIdx, cIdx))"
+                                            @open-photo-editor="(payload) => emit('open-photo-editor', payload)" />
                                     </div>
                                 </template>
                             </draggable>
