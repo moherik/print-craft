@@ -189,6 +189,8 @@ onMounted(() => {
         orientation.value = template.value.orientation;
         gridCols.value = template.value.gridCols;
         gridRows.value = template.value.gridRows;
+        marginMm.value = template.value.marginMm ?? 5;
+        gridGapMm.value = template.value.gridGapMm ?? 0;
 
         if (template.value.disableSync) {
             isSynced.value = false;
@@ -239,7 +241,10 @@ onUnmounted(() => {
 
 function addPage() {
     const count = gridCols.value * gridRows.value;
-    const newCells = Array.from({ length: count }, () => JSON.parse(JSON.stringify(cells.value[0] || [])));
+    const masterStr = (isSynced.value || !template.value?.widgets) 
+        ? JSON.stringify(cells.value[0] || []) 
+        : JSON.stringify(template.value.widgets);
+    const newCells = Array.from({ length: count }, () => JSON.parse(masterStr));
     cells.value = [...cells.value, ...newCells];
 }
 
@@ -262,8 +267,10 @@ const totalPagesCount = computed(() => {
 watch([gridCols, gridRows], ([cols, rows]) => {
     const count = cols * rows;
     if (cells.value.length < count) {
-        // Add new cells by copying the first one
-        const newCells = Array.from({ length: count - cells.value.length }, () => JSON.parse(JSON.stringify(cells.value[0] || [])));
+        const masterStr = (isSynced.value || !template.value?.widgets) 
+            ? JSON.stringify(cells.value[0] || []) 
+            : JSON.stringify(template.value.widgets);
+        const newCells = Array.from({ length: count - cells.value.length }, () => JSON.parse(masterStr));
         cells.value = [...cells.value, ...newCells];
     } else if (cells.value.length > count) {
         cells.value = cells.value.slice(0, count);
@@ -273,8 +280,10 @@ watch([gridCols, gridRows], ([cols, rows]) => {
 function updateQuantity(newCount) {
     if (newCount === cells.value.length) return;
     if (newCount > cells.value.length) {
-        const master = JSON.stringify(cells.value[0] || []);
-        const newCells = Array.from({ length: newCount - cells.value.length }, () => JSON.parse(master));
+        const masterStr = (isSynced.value || !template.value?.widgets) 
+            ? JSON.stringify(cells.value[0] || []) 
+            : JSON.stringify(template.value.widgets);
+        const newCells = Array.from({ length: newCount - cells.value.length }, () => JSON.parse(masterStr));
         cells.value = [...cells.value, ...newCells];
     } else {
         cells.value = cells.value.slice(0, newCount);

@@ -61,12 +61,20 @@ watch(zoom, (newVal, oldVal) => {
     }
 });
 
-// We pass image-style to the Cropper to show real-time brightness/contrast
+// We pass a CSS custom property to style the images deeply
 const customImageStyle = computed(() => {
     return {
-        filter: `brightness(${brightness.value}%) contrast(${contrast.value}%)`
+        '--custom-filter': `brightness(${brightness.value}%) contrast(${contrast.value}%)`
     };
 });
+
+function resetAdjustments() {
+    brightness.value = 100;
+    contrast.value = 100;
+    if (cropperRef.value) {
+        cropperRef.value.reset();
+    }
+}
 
 function handleChangePhoto(e) {
     const file = e.target.files[0];
@@ -74,10 +82,7 @@ function handleChangePhoto(e) {
     const reader = new FileReader();
     reader.onload = (ev) => {
         currentImageSrc.value = ev.target.result;
-        brightness.value = 100;
-        contrast.value = 100;
-        rotation.value = 0;
-        zoom.value = 1;
+        resetAdjustments();
         e.target.value = ''; // reset
     };
     reader.readAsDataURL(file);
@@ -139,9 +144,10 @@ function close() {
 
                 <!-- Cropper Preview -->
                 <div class="flex-1 bg-slate-100 flex items-center justify-center p-4 min-h-[300px] overflow-hidden">
-                    <Cropper ref="cropperRef" class="cropper" :src="currentImageSrc" :stencil-props="{
+                    <Cropper ref="cropperRef" class="cropper custom-filter-cropper" :src="currentImageSrc" :stencil-props="{
                         aspectRatio: aspectRatio
-                    }" :image-style="customImageStyle" image-restriction="fit-area" />
+                    }" :style="customImageStyle"
+                        :default-size="({ imageSize }) => imageSize" image-restriction="fit-area" />
                 </div>
 
                 <!-- Controls Sidebar -->
@@ -176,7 +182,12 @@ function close() {
 
                     <!-- Sliders -->
                     <div class="space-y-5">
-                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Penyesuaian</h4>
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Penyesuaian</h4>
+                            <button @click="resetAdjustments" class="text-[10px] font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                                Reset
+                            </button>
+                        </div>
 
                         <!-- Brightness -->
                         <div>
@@ -200,28 +211,33 @@ function close() {
                             <input type="range" v-model="contrast" min="0" max="200" class="w-full accent-red-600">
                         </div>
 
-                        <!-- Rotation -->
-                        <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <label class="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                        <div class="border-t border-slate-100 my-2"></div>
+
+                        <!-- Rotation & Zoom Buttons -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Rotation -->
+                            <div>
+                                <label class="text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
                                     <RotateCw class="w-3.5 h-3.5 text-slate-400" /> Putar
                                 </label>
-                                <span class="text-xs text-slate-500 font-mono">{{ rotation }}°</span>
+                                <div class="flex gap-2">
+                                    <button @click="cropperRef?.rotate(-90)" class="flex-1 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors font-medium text-xs">-90°</button>
+                                    <button @click="cropperRef?.rotate(90)" class="flex-1 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors font-medium text-xs">+90°</button>
+                                </div>
                             </div>
-                            <input type="range" v-model="rotation" min="-180" max="180" class="w-full accent-red-600">
+                            
+                            <!-- Zoom -->
+                            <div>
+                                <label class="text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                                    <ZoomIn class="w-3.5 h-3.5 text-slate-400" /> Skala
+                                </label>
+                                <div class="flex gap-2">
+                                    <button @click="cropperRef?.zoom(0.8)" class="flex-1 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors font-medium text-lg leading-none">-</button>
+                                    <button @click="cropperRef?.zoom(1.2)" class="flex-1 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors font-medium text-lg leading-none">+</button>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Zoom -->
-                        <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <label class="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                                    <ZoomIn class="w-3.5 h-3.5 text-slate-400" /> Skala (Zoom)
-                                </label>
-                                <span class="text-xs text-slate-500 font-mono">{{ zoom }}x</span>
-                            </div>
-                            <input type="range" v-model="zoom" min="0.5" max="3" step="0.1"
-                                class="w-full accent-red-600">
-                        </div>
                     </div>
                 </div>
             </div>
@@ -257,5 +273,9 @@ function close() {
 .cropper {
     max-height: 500px;
     width: 100%;
+}
+
+.custom-filter-cropper :deep(img) {
+    filter: var(--custom-filter) !important;
 }
 </style>

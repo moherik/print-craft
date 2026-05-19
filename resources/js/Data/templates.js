@@ -298,50 +298,45 @@ export const TEMPLATES = [
         name: "Kartu Nama Standard",
         slug: "kartu-nama-2x5",
         description:
-            "Grid 2x5 kartu nama standar (90x55mm) dalam satu lembar A4 dengan garis potong presisi.",
+            "Grid 2x5 kartu nama profesional (90x53mm) dalam satu lembar A4. Desain 2 kolom dengan logo dan data diri.",
         categoryId: "kartu-nama",
         paperSize: "A4",
         orientation: "portrait",
         gridCols: 2,
         gridRows: 5,
+        marginMm: 15, // This forces exactly 90mm width (210 - 30 = 180 / 2)
+        gridGapMm: 0,
         isFeatured: true,
         tags: ["kartu nama", "business card", "name card"],
-        previewColor: "#DC2626",
+        previewColor: "#0F172A",
         widgets: [
             {
-                type: "text",
-                label: "Nama",
-                placeholder: "Ahmad Rasyid",
-                fontSize: 12,
-                fontWeight: "bold",
-            },
-            {
-                type: "text",
-                label: "Jabatan",
-                placeholder: "Software Engineer",
-                fontSize: 9,
-            },
-            {
-                type: "text",
-                label: "Perusahaan",
-                placeholder: "PT. Tech Indonesia",
-                fontSize: 10,
-                fontWeight: "500",
-            },
-            { type: "divider" },
-            {
-                type: "text",
-                label: "Telepon",
-                placeholder: "+62 812-3456-7890",
-                fontSize: 8,
-            },
-            {
-                type: "text",
-                label: "Email",
-                placeholder: "ahmad@tech.co.id",
-                fontSize: 8,
-            },
-            { type: "qrcode", label: "QR vCard", value: "https://example.com" },
+                type: "columns",
+                label: "Layout Kartu Nama",
+                colCount: 2,
+                colWidths: [1.2, 2.5],
+                gap: 4,
+                childGap: 1.5,
+                children: [
+                    // Kiri: Logo/Foto
+                    [
+                        { type: "image", label: "Logo/Foto", fit: "contain" }
+                    ],
+                    // Kanan: Data Diri
+                    [
+                        { type: "divider", style: "transparent", height: 2 },
+                        { type: "text", label: "Perusahaan", placeholder: "PT. NUSANTARA TECH", fontSize: 10, fontWeight: "800", color: "#0f172a", letterSpacing: 1 },
+                        { type: "divider", style: "solid", color: "#e2e8f0", height: 3 },
+                        { type: "text", label: "Nama", placeholder: "Ahmad Rasyid, S.Kom", fontSize: 12, fontWeight: "bold", color: "#1e293b" },
+                        { type: "text", label: "Jabatan", placeholder: "Lead Software Engineer", fontSize: 8, fontWeight: "500", color: "#64748b" },
+                        { type: "divider", style: "transparent", height: 4 },
+                        { type: "text", label: "Telepon", placeholder: "📞 +62 812-3456-7890", fontSize: 7, color: "#334155" },
+                        { type: "text", label: "Email", placeholder: "✉️ ahmad@nusantara.co.id", fontSize: 7, color: "#334155" },
+                        { type: "text", label: "Website", placeholder: "🌐 www.nusantara.tech", fontSize: 7, color: "#334155" },
+                        { type: "text", label: "Alamat", placeholder: "📍 Jl. Sudirman Kav. 21, Jakarta", fontSize: 7, color: "#334155" }
+                    ]
+                ]
+            }
         ],
     },
     {
